@@ -1,0 +1,44 @@
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body, #root { width: 100%; height: 100%; overflow: hidden; background: #010b10; touch-action: none; overscroll-behavior: none; }
+body { font-family: "Avenir Next", "Segoe UI", system-ui, sans-serif; color: #a8c8c0; user-select: none; -webkit-user-select: none; }
+#c { position: fixed; inset: 0; display: block; }
+
+/* sonar-console HUD */
+.hudState { position: fixed; z-index: 5; top: max(14px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left)); pointer-events: none;
+  font-size: .8125rem; letter-spacing: .14em; text-transform: uppercase; color: rgba(90,255,220,.75);
+  text-shadow: 0 0 14px rgba(90,255,220,.3); }
+.hudState b { font-size: 1.0625rem; letter-spacing: .06em; }
+.hudState .dim { color: rgba(140,170,190,.45); }
+.hudState.gutterState { color: rgba(255,61,104,.9); animation: strobe .35s steps(2) infinite; }
+@keyframes strobe { 50% { opacity: .3; } }
+
+.leaderboard { position: fixed; z-index: 5; top: max(14px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right)); pointer-events: none;
+  text-align: right; font-size: .78rem; line-height: 1.6; color: rgba(150,180,195,.75); }
+.leaderboard h4 { font-size: .6875rem; letter-spacing: .2em; text-transform: uppercase; color: rgba(90,255,220,.45); margin-bottom: 3px; }
+
+.hint { position: fixed; z-index: 5; bottom: max(14px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); pointer-events: none;
+  max-width: 92vw; text-align: center;
+  font-size: .72rem; letter-spacing: .1em; color: rgba(140,170,190,.4); text-transform: uppercase; }
+.hint .hintTouch { display: none; }
+
+.lanternBtn { position: fixed; z-index: 6; right: max(18px, env(safe-area-inset-right)); bottom: max(22px, env(safe-area-inset-bottom));
+  width: 74px; height: 74px; padding: 0; border-radius: 50%;
+  border: 2px solid rgba(90,255,220,.5); background: radial-gradient(circle at 50% 45%, rgba(90,255,220,.22), rgba(1,15,14,.6) 70%);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  box-shadow: 0 0 26px rgba(90,255,220,.22); transition: all .25s; }
+.lanternBtn::after { content: ""; width: 22px; height: 22px; border-radius: 50%;
+  background: radial-gradient(circle, #d8fff2 20%, rgba(90,255,220,.6) 60%, transparent 75%); }
+.lanternBtn:focus-visible { outline: 2px solid #d8fff2; outline-offset: 4px; }
+
+/* keyboard-and-mouse setups don't need the touch shutter button */
+@media (hover: hover) and (pointer: fine) {
+  .lanternBtn { display: none; }
+}
+/* touch devices get the touch wording instead of mouse/keyboard hints */
+@media (pointer: coarse) {
+  .hint .hintKeys { display: none; }
+  .hint .hintTouch { display: inline; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hudState.gutterState { animation: none; }
+}

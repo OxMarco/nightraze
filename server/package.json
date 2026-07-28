@@ -1,0 +1,36 @@
+{
+  "name": "@nightraze/server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm run test:unit",
+    "test:unit": "npm run build && node --test test/*.test.mjs",
+    "test:integration": "npm run build && node integration.test.mjs",
+    "test:all": "npm run build && node --test test/*.test.mjs && node integration.test.mjs",
+    "start": "node dist/server.js",
+    "build": "tsc",
+    "dev": "tsc --watch & node --watch dist/server.js",
+    "dev:docker": "nodemon -L --watch src -e ts --exec \"npm run build && node dist/server.js\"",
+    "gen": "buf generate"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.12.1",
+    "@fastify/static": "^10.1.2",
+    "@fastify/websocket": "^11.3.0",
+    "fastify": "^5.10.0",
+    "obscenity": "^0.4.6"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@bufbuild/buf": "^1.72.0",
+    "@bufbuild/protoc-gen-es": "^2.12.1",
+    "@types/node": "^26.1.1",
+    "@types/ws": "^8.18.1",
+    "nodemon": "^3.1.14",
+    "typescript": "^7.0.2"
+  }
+}

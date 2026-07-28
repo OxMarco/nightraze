@@ -1,0 +1,139 @@
+syntax = "proto3";
+
+package nightraze.v1;
+
+// ---- Client -> Server ----
+// The client can only ever express intent: a direction, a stance toggle, an
+// aimed lunge, a vent, a respawn. Positions, speeds, and outcomes are
+// server-owned.
+
+message ClientMessage {
+  oneof msg {
+    MovementInput input = 1;
+    ToggleLantern toggle = 2;
+    DashRequest dash = 3;
+    VentRequest vent = 4;
+    RespawnRequest respawn = 5;
+  }
+}
+
+// A direction the player wants to move in. The server normalizes it; magnitude
+// up to 40 units acts as a proportional throttle, and larger values are capped.
+message MovementInput {
+  float tx = 1;
+  float ty = 2;
+}
+
+message ToggleLantern {}
+
+// Aim direction for the flare lunge (normalized server-side).
+message DashRequest {
+  float tx = 1;
+  float ty = 2;
+}
+
+message VentRequest {}
+
+message RespawnRequest {}
+
+// ---- Server -> Client ----
+
+message ServerMessage {
+  oneof msg {
+    Welcome welcome = 1;
+    Snapshot snapshot = 2;
+    Dead dead = 3;
+    Tuning tuning = 4;
+  }
+}
+
+// Balance levers the client must agree with to draw the world correctly (§10).
+// Sent on join and again whenever a lever moves mid-session, so a playtest can
+// sweep a dial across one sitting instead of across rebuilds. The server is
+// still the only authority — these values change what the client *draws*, not
+// what it may perceive.
+message Tuning {
+  float glow_g = 1;   // irreducible-glow curve (§6): max(0, (√L − 5) · G)
+}
+
+// Sent on join AND on respawn (the client flips back to "open" on it).
+message Welcome {
+  uint32 player_id = 1;
+  uint32 world_size = 2;
+}
+
+message Dead {
+  string by = 1;          // who drained the lantern
+  float peak_light = 2;   // brightest the run ever got
+}
+
+// Perception-managed world state: the server only sends entities this client
+// can perceive under the GDD §6 rules (vision, glow reach, shimmer). This is
+// interest management AND anti-cheat in one — a vision game must never ship
+// the invisible to the client.
+//
+// Perception is graded, so the wire is too. Gating alone is not enough: a
+// modified client renders everything it receives, so a contact the design
+// means to be ambiguous must arrive ambiguous. Three tiers:
+//   - seen (vision, or a burning/revealed lantern whose glow reaches you):
+//     the full PlayerState below.
+//   - smudge (a dark lantern's irreducible glow reaches you, §6): a
+//     PlayerState with no name and no speed, and a light value rounded to
+//     the step the smudge's own radius already betrays.
+//   - shimmer (a dark mover's wake, §6): no PlayerState at all — only a
+//     SHIMMER effect, at the ring cadence, snapped to a coarse grid.
+message Snapshot {
+  double server_time_ms = 1;
+  repeated PlayerState players = 2;
+  repeated MoteState motes = 3;       // field motes (plankton, worth 1)
+  repeated LooseMoteState loose = 4;  // spilled/vented plasma, variable value
+  repeated Effect effects = 5;        // transient events since last snapshot
+}
+
+message PlayerState {
+  uint32 id = 1;
+  float x = 2;
+  float y = 3;
+  float light = 4;      // the one resource; the client derives radius/glow from it
+                        // (rounded to the smudge step for glow-only contacts)
+  bool lit = 5;
+  float reveal_t = 6;   // seconds of revealed-glow remaining
+  bool shielded = 7;    // spawn protection
+  float speed = 8;      // body squash only; 0 for glow-only contacts
+  string name = 9;      // empty for glow-only contacts — a smudge has no identity
+  float dash_cd = 10;   // seconds of dash cooldown remaining (self only; 0 for others)
+}
+
+message MoteState {
+  uint32 id = 1;
+  float x = 2;
+  float y = 3;
+}
+
+message LooseMoteState {
+  uint32 id = 1;
+  float x = 2;
+  float y = 3;
+  float value = 4;
+  bool settling = 5;    // flickering back into the field
+}
+
+enum EffectKind {
+  EFFECT_KIND_UNSPECIFIED = 0;
+  BURN = 1;   // contact spark + reveal flash at the touch point
+  SNUFF = 2;  // membrane rupture burst
+  DOUSE = 3;  // lantern-closing afterimage stain
+  BUMP = 4;   // dark-on-dark ripple
+  VENT = 5;   // vent whoosh ring
+  SHIMMER = 6; // a dark mover's wake ring (§6)
+}
+
+message Effect {
+  EffectKind kind = 1;
+  float x = 2;
+  float y = 3;
+  float m = 4;  // magnitude: flash/stain radius. For SHIMMER, the intensity of
+                // the ring — one of three steps, matching §6's three stealth
+                // states. Never a velocity: a finer scale would let a modified
+                // client read speed (and through it, light) off the wake.
+}

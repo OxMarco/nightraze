@@ -1,0 +1,63 @@
+# Local / dev infra: hot reload, plain HTTP, no TLS/Traefik/autoheal.
+#   docker compose -f docker-compose.local.yml up --build   (or: make dev)
+# Then open http://localhost:5173/  (Vite dev server with HMR)
+#
+# Editing client/src, client/index.html, client/vite.config.ts or server/src on
+# the host reloads live — the source is bind-mounted into the containers, so no
+# rebuild is needed for code changes (only for dependency changes).
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  server:
+    build:
+      context: .
+      target: server-dev
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_REQUESTS: ${LOG_REQUESTS:-true}
+      MAX_PLAYERS: ${MAX_PLAYERS:-100}
+      MAX_CONNS_PER_IP: ${MAX_CONNS_PER_IP:-8}
+      BOT_POP_TARGET: ${BOT_POP_TARGET:-12}
+      CHEAT_BAN_SECONDS: ${CHEAT_BAN_SECONDS:-300}
+      CHEAT_BAN_MULTIPLIER: ${CHEAT_BAN_MULTIPLIER:-10}
+      CHEAT_BAN_MAX_SECONDS: ${CHEAT_BAN_MAX_SECONDS:-604800}
+      CHEAT_BAN_RESET_SECONDS: ${CHEAT_BAN_RESET_SECONDS:-2592000}
+      BAN_DB_PATH: ${BAN_DB_PATH:-/data/ip-bans.sqlite}
+      GLOW_G: ${GLOW_G:-6}
+      TUNE_TOKEN: ${TUNE_TOKEN:-}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+    volumes:
+      - ./server/src:/app/src        # live source; dist/ and node_modules stay in the container
+      - server_bans_dev:/data
+    ports:
+      - "3000:3000"                  # optional: hit the API/WS directly
+    logging: *default-logging
+
+  web:
+    build:
+      context: .
+      target: client-dev
+    depends_on:
+      - server
+    environment:
+      VITE_PROXY_TARGET: http://server:3000
+      # Same bind-mount caveat: make Vite's file watcher (chokidar) poll so HMR
+      # fires on host edits under macOS/Windows.
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ./client/src:/app/src
+      - ./client/index.html:/app/index.html
+      - ./client/vite.config.ts:/app/vite.config.ts
+    ports:
+      - "5173:5173"
+    logging: *default-logging
+
+volumes:
+  server_bans_dev:

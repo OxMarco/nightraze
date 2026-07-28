@@ -1,0 +1,207 @@
+# Production infra: Traefik terminates TLS with automatic Let's Encrypt certs,
+# redirects all HTTP to HTTPS, and routes the whole host to a single app
+# container that serves the built SPA, the HTTP API, and the /play WebSocket on
+# one origin. Traefik is the only reverse proxy in the stack.
+#
+# Prereqs on the VPS:
+#   - A DNS A/AAAA record for ${DOMAIN} pointing at this host
+#   - Ports 80 and 443 reachable from the internet (80 is needed for the ACME
+#     HTTP challenge and the HTTP->HTTPS redirect)
+#   - A .env file next to this one (copy .env.example) with DOMAIN + ACME_EMAIL
+#
+# Run:
+#   docker compose -f docker-compose.prod.yml up -d --build   (or: make up)
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  app:
+    image: nightraze-app:current
+    build:
+      context: .
+      target: runtime
+    restart: unless-stopped
+    init: true
+    expose:
+      - "3000"          # internal only; reached via Traefik
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      TRUST_PROXY: "true"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_REQUESTS: ${LOG_REQUESTS:-false}
+      MAX_PLAYERS: ${MAX_PLAYERS:-40}
+      MAX_CONNS_PER_IP: ${MAX_CONNS_PER_IP:-8}
+      BOT_POP_TARGET: ${BOT_POP_TARGET:-12}
+      CHEAT_BAN_SECONDS: ${CHEAT_BAN_SECONDS:-300}
+      CHEAT_BAN_MULTIPLIER: ${CHEAT_BAN_MULTIPLIER:-10}
+      CHEAT_BAN_MAX_SECONDS: ${CHEAT_BAN_MAX_SECONDS:-604800}
+      CHEAT_BAN_RESET_SECONDS: ${CHEAT_BAN_RESET_SECONDS:-2592000}
+      BAN_DB_PATH: ${BAN_DB_PATH:-/data/ip-bans.sqlite}
+      GLOW_G: ${GLOW_G:-6}
+      TUNE_TOKEN: ${TUNE_TOKEN:-}
+      # Empty falls back to the CrazyGames domain list in server/src/embedding.ts.
+      EMBED_FRAME_ANCESTORS: ${EMBED_FRAME_ANCESTORS:-}
+      # Deliberately just our own origin: the /play socket's Origin is the
+      # document running the script, which inside a portal's iframe is still us.
+      ALLOWED_ORIGINS: https://${DOMAIN:?set DOMAIN in .env}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 3s
+      timeout: 2s
+      retries: 2
+      start_period: 10s
+    mem_limit: 768m
+    memswap_limit: 768m
+    pids_limit: 128
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    volumes:
+      - server_bans:/data
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 15s
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    logging: *default-logging
+    labels:
+      # Docker never restarts a container for being unhealthy on its own, and
+      # Traefik keeps routing to it; the autoheal sidecar turns the healthcheck
+      # above into an actual restart.
+      - autoheal=true
+      - traefik.enable=true
+      - traefik.http.routers.app.rule=Host(`${DOMAIN:?set DOMAIN in .env}`)
+      - traefik.http.routers.app.entrypoints=websecure
+      - traefik.http.routers.app.tls=true
+      - traefik.http.routers.app.tls.certresolver=letsencrypt
+      - traefik.http.services.app.loadbalancer.server.port=3000
+    networks:
+      - web
+
+  traefik:
+    # Exact pin: `v3` floats across minors, which have shipped config-breaking
+    # changes before. Bump deliberately, not via a routine `compose pull`.
+    image: traefik:v3.7.6@sha256:21a3d83696379bac6434bb32e1dde0aff0e84ef2abd053ed3db87d3f45e749b2
+    restart: unless-stopped
+    depends_on:
+      docker-proxy:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    command:
+      - --providers.docker=true
+      - --providers.docker.endpoint=tcp://docker-proxy:2375
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=nightraze-web
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.http.tls=true
+      # Traefik v3 defaults readTimeout to 60s, which cuts long-lived connections
+      # such as the game socket. 0 disables it, matching the hour-long read
+      # timeout the previous nginx tier used for /play. Play frames flow
+      # continuously, so no separate keep-alive tuning is needed.
+      - --entrypoints.websecure.transport.respondingTimeouts.readTimeout=0
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:?set ACME_EMAIL in .env}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --accesslog=true
+      - --log.level=INFO
+      - --ping=true
+      # Uncomment while testing to avoid hitting LE rate limits, then remove and
+      # delete the traefik_letsencrypt volume to get a real cert:
+      # - --certificatesresolvers.letsencrypt.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
+    volumes:
+      - traefik_letsencrypt:/letsencrypt
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 3s
+      timeout: 2s
+      retries: 2
+      start_period: 10s
+    mem_limit: 128m
+    pids_limit: 128
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    labels:
+      - autoheal=true
+    networks:
+      - web
+      - docker-api
+
+  # Traefik only needs read access to container/network metadata. Keeping the
+  # public reverse proxy away from the raw Docker socket prevents a Traefik
+  # compromise from becoming immediate root access to the host.
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy:latest@sha256:1f5038b54f06c3e18422902cf00ba21803d1c97805aae032e5e6673d532d3459
+    restart: unless-stopped
+    environment:
+      CONTAINERS: 1
+      NETWORKS: 1
+      EVENTS: 1
+      PING: 1
+      VERSION: 1
+      POST: 0
+      LOG_LEVEL: warning
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:2375/_ping"]
+      interval: 5s
+      timeout: 2s
+      retries: 2
+      start_period: 5s
+    mem_limit: 64m
+    pids_limit: 64
+    logging: *default-logging
+    labels:
+      - autoheal=true
+    networks:
+      - docker-api
+
+  # Docker never restarts a container for being unhealthy on its own; autoheal
+  # restarts anything labelled autoheal=true that goes unhealthy.
+  autoheal:
+    image: willfarrell/autoheal:latest@sha256:14c1082b1149217d7c5b0a1edaa97a383aa44c4f94389f7951b2e3a728fabbfd
+    restart: unless-stopped
+    environment:
+      AUTOHEAL_CONTAINER_LABEL: autoheal
+      AUTOHEAL_INTERVAL: 3
+      AUTOHEAL_START_PERIOD: 15
+      # Frozen processes get a short deadline. Normal deploys still use each
+      # service's longer stop_grace_period for graceful shutdown.
+      AUTOHEAL_DEFAULT_STOP_TIMEOUT: 5
+      CURL_TIMEOUT: 10
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    mem_limit: 64m
+    pids_limit: 64
+    logging: *default-logging
+    network_mode: none
+
+volumes:
+  traefik_letsencrypt:
+  server_bans:
+
+networks:
+  web:
+    name: nightraze-web
+    driver: bridge
+  docker-api:
+    name: nightraze-docker-api
+    driver: bridge
+    internal: true

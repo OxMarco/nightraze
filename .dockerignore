@@ -1,0 +1,16 @@
+# The build context is now the repository root (one image needs both
+# workspaces), so keep the heavy and irrelevant parts out of it.
+**/node_modules
+**/dist
+**/*.test.mjs
+**/test
+.git
+.github
+.claude
+.DS_Store
+.env
+.env.*
+scripts
+docker-compose*.yml
+Makefile
+*.md
