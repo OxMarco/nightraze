@@ -287,14 +287,21 @@ fastify.get("/leaderboard", async () => room.leaderboard());
 // Aggregates only; the underlying anonymous visitor and session rows are never
 // exposed over HTTP. With no token configured the route does not exist.
 if (METRICS_TOKEN) {
-  fastify.get("/metrics", async (req, reply) => {
-    if (req.headers["x-metrics-token"] !== METRICS_TOKEN) {
-      return reply.code(403).send({ error: "bad metrics token" });
-    }
-    reply.header("cache-control", "no-store");
-    return metricsStore.snapshot(room.activeHumanCount());
-  });
-  fastify.log.info("aggregate product metrics enabled at GET /metrics");
+  fastify.get<{ Querystring: { token?: string } }>(
+    "/metrics",
+    async (req, reply) => {
+      if (req.query.token !== METRICS_TOKEN) {
+        return reply.code(403).send({ error: "bad metrics token" });
+      }
+
+      reply.header("cache-control", "no-store");
+      return metricsStore.snapshot(room.activeHumanCount());
+    },
+  );
+
+  fastify.log.info(
+    `aggregate product metrics enabled at GET /metrics?token=${encodeURIComponent(METRICS_TOKEN)}`,
+  );
 }
 
 // Browser exceptions are intentionally reduced to a category. Messages,
