@@ -53,6 +53,20 @@ COPY server/tsconfig.json ./
 COPY server/src ./src
 RUN npm run build
 
+# ---- test ----
+# Deploys run the suite here instead of on the host: production has Docker but
+# no Node toolchain, so `npm` and `node` only exist inside these stages.
+# Building on server-build reuses its `npm ci` (devDependencies included) and
+# `tsc` output, and pulling in the client bundle makes this target fail for
+# exactly the reasons `make test` does locally, where client/`npm test` *is*
+# its build. dist/server.js resolves ../public, so the integration test drives
+# the same static+API+WebSocket layout production serves.
+FROM server-build AS test
+COPY --from=client-build /app/dist ./public
+COPY server/test ./test
+COPY server/integration.test.mjs ./
+RUN node --test test/*.test.mjs && node integration.test.mjs
+
 # ---- runtime ----
 FROM node:24-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd AS runtime
 ENV NODE_ENV=production

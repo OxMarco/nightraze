@@ -38,6 +38,11 @@ CX22 contention, waits for every container to become healthy, and checks the
 static site, simulation health, and WebSocket upgrade. A failed deployment
 automatically restores the previous application image.
 
+The suite runs inside the image (`make test-docker`, the Dockerfile's `test`
+stage), not on the host, so the VPS needs only Docker — deliberately no Node,
+npm, or `node_modules` outside a container. `make test` still runs the same
+checks against a host toolchain for local development.
+
 To roll back the most recent successful deployment manually:
 
 ```sh

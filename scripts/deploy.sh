@@ -35,7 +35,10 @@ fi
 
 echo "Validating configuration and running the full test suite..."
 compose config --quiet
-make test
+# Containerised deliberately: the VPS has Docker but no host Node, and running
+# the suite in the pinned build image keeps deploy-time tests identical to the
+# ones developers run locally.
+make test-docker
 
 # Preserve the exact image ID used by the running container. Retagging is
 # instantaneous and leaves one deliberately simple, local rollback point.
