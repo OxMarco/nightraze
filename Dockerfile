@@ -16,6 +16,7 @@ WORKDIR /app
 COPY client/package.json client/package-lock.json ./
 RUN npm ci
 COPY client/tsconfig.json client/vite.config.ts client/index.html client/embed.html ./
+COPY client/public ./public
 COPY client/src ./src
 EXPOSE 5173
 CMD ["npm", "run", "dev"]
@@ -41,6 +42,7 @@ WORKDIR /app
 COPY client/package.json client/package-lock.json ./
 RUN npm ci
 COPY client/tsconfig.json client/vite.config.ts client/index.html client/embed.html ./
+COPY client/public ./public
 COPY client/src ./src
 RUN npm run build
 
