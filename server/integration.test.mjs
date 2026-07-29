@@ -128,9 +128,9 @@ if (ownsServer) {
   const deniedMetrics = await fetch(`${httpBase}/metrics`);
   check("product metrics require their token", deniedMetrics.status === 403,
     `status=${deniedMetrics.status}`);
-  const metrics = await (await fetch(
-    `${httpBase}/metrics?token=${encodeURIComponent("integration-metrics-token")}`,
-  )).json();
+  const metrics = await (await fetch(`${httpBase}/metrics`, {
+    headers: { "x-metrics-token": "integration-metrics-token" },
+  })).json();
   check("product metrics count the connected anonymous user",
     metrics.currentPlaying === 1 && metrics.dailyActiveUsers?.at(-1)?.users === 1 &&
       metrics.locations?.[0]?.location === "timezone:Europe/Malta",
