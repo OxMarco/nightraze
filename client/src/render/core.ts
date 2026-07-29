@@ -29,10 +29,18 @@ export const LIFE_OF = (h: number, a: number) => `hsla(${h},100%,68%,${a})`;
 export const BRIGHT_OF = (h: number, a: number) => `hsla(${h},100%,92%,${a})`;
 
 // Every other lantern derives its hue from its server-assigned id, inside the
-// palette's "alive" band (green -> teal -> cyan -> blue). Golden-ratio stepping
-// spreads consecutive ids far apart; a window around the signature teal is
-// skipped so no one else reads as "me", and HARM's pink-red stays reserved
-// for danger. Deterministic: every client colors the same id the same way.
+// palette's "alive" band (green -> teal -> cyan -> blue). A window around the
+// signature teal is skipped so no one else reads as "me", and HARM's pink-red
+// stays reserved for danger. Deterministic: every client colors the same id the
+// same way.
+//
+// CAVEAT: golden-ratio stepping only spreads *consecutive* ids far apart, and
+// player ids are not consecutive — server/src/game/room.ts draws players, field
+// motes and loose light from one shared `nextId++`, so ids arrive sparse and
+// effectively arbitrary. Hues are therefore ~uniform random in the band, and
+// two players in a room can land a few degrees apart. Fixing that needs a small
+// per-room slot index (0,1,2,...) assigned server-side and fed in here instead
+// of the raw id; that restores the low-discrepancy spread this was written for.
 const HUE_MIN = 125, HUE_MAX = 225;
 const SELF_GAP_LO = 157, SELF_GAP_HI = 177;
 const GOLDEN = 0.618033988749895;

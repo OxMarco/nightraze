@@ -215,11 +215,21 @@ function ActionButtons({
         className={"padBtn padHide ui" + (lit ? "" : " off")}
         aria-label={lit ? "Hide lantern" : "Show lantern"}
         title={lit ? "Hide" : "Show"}
-        // a stance change, not a reflex: click semantics are fine here, and
-        // keep the button reachable by assistive tech
-        onClick={(ev) => {
+        // Down-driven like the jump, despite being a stance rather than a
+        // reflex: `click` is only synthesized for the *primary* pointer, and a
+        // thumb already resting on the stick owns that — so a second finger
+        // tapping here produced no click at all, and the two-thumb scheme could
+        // steer-and-jump but never steer-and-douse.
+        onPointerDown={(ev) => {
+          ev.preventDefault();
           ev.stopPropagation();
           onHide();
+        }}
+        // keyboard activation only: Enter/Space synthesize a click with
+        // `detail: 0`, while every pointer-borne click was already served above
+        onClick={(ev) => {
+          ev.stopPropagation();
+          if (ev.detail === 0) onHide();
         }}
       >
         <LanternIcon lit={lit} />

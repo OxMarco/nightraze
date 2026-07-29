@@ -99,13 +99,21 @@ export function drawCreature(ctx: CanvasRenderingContext2D, t: number, o: Creatu
     body.addColorStop(0.6, HARM(0.25));
     body.addColorStop(1, HARM(0.05));
   } else {
-    body.addColorStop(0, lifeBright(lerp(0.22, 0.95, bright) * strobe));
-    body.addColorStop(0.55, life(lerp(0.12, 0.5, bright) * strobe));
+    /* The heart stays white-hot but must stay SMALL. lifeBright sits at 92%
+       lightness, where hsl chroma has collapsed to ~0.16 — every hue there
+       composites to the same pale near-white, so a wide bright core erases the
+       per-player hue entirely (see playerHue in core.ts). The hue-carrying 68%
+       stop owns the body from 28% of the radius out; that keeps "bright heart,
+       dim rim" while leaving the identity readable at a glance. */
+    body.addColorStop(0, lifeBright(lerp(0.20, 0.85, bright) * strobe));
+    body.addColorStop(0.28, life(lerp(0.16, 0.75, bright) * strobe));
+    body.addColorStop(0.7, life(lerp(0.10, 0.45, bright) * strobe));
     body.addColorStop(1, life(lerp(0.04, 0.15, bright) * strobe));
   }
   ctx.fillStyle = body;
   ctx.fill();
-  ctx.strokeStyle = bright > 0.5 ? lifeBright(0.85 * strobe * bright) : RIM(0.35 + 0.3 * bright);
+  // the rim carries hue too — an outline is a stronger identity cue than a core
+  ctx.strokeStyle = bright > 0.5 ? life(0.9 * strobe * bright) : RIM(0.35 + 0.3 * bright);
   ctx.lineWidth = lerp(1.5, 2, bright);
   ctx.stroke();
   if (o.gutter) glowPool(ctx, o.x, o.y, r * 1.6, HARM, 0.3 * (1 - strobe));
