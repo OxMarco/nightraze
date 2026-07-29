@@ -1,14 +1,18 @@
 /* Which touch scheme the player is on.
 
-   The default is the one-finger scheme the game was designed around (§9): drag
-   anywhere to steer, tap to lunge, corner button to shutter. "one-finger
-   playable" is a platform claim in the GDD header and part of the portal pitch,
-   so the pad scheme is offered, never imposed — flipping this is the player's
-   choice and it sticks.
+   The default is the pad scheme: a stick bottom-left, jump and hide above
+   it. This answers §9's recorded watch item — drag-anywhere steering puts the
+   player's thumb over the darkness they are squinting into, and a stick in the
+   corner moves the thumb off the water.
 
-   The pads exist to answer §9's recorded watch item: drag-anywhere steering
-   puts the player's thumb over the darkness they are squinting into. A stick in
-   the corner moves the thumb off the water.
+   The one-finger scheme (drag anywhere to steer, tap to jump, corner button to
+   hide) stays available as an opt-out, because "one-finger playable" is a
+   platform claim in the GDD header and part of the portal pitch. Flipping
+   either way is the player's choice and it sticks.
+
+   Both schemes are touch schemes, and neither reaches a mouse-only desktop:
+   useIsTouch() gates every render site, so a desktop steers with the cursor and
+   hides with Space/L, and is never offered the switch.
 
    Convenience only — nothing here is authority over anything, and the server
    cannot tell the two schemes apart: both express the same steer/dash/toggle
@@ -29,7 +33,8 @@ const listeners = new Set<() => void>();
 
 export function readScheme(): ControlScheme {
   if (cached === null) {
-    cached = platform().storage.get(KEY) === "pads" ? "pads" : "one-finger";
+    // pads are the default; one-finger is what you opt *out* to
+    cached = platform().storage.get(KEY) === "one-finger" ? "one-finger" : "pads";
   }
   return cached;
 }

@@ -24,26 +24,26 @@ const COPY: Record<
     touch: "drag to steer",
     pads: "the stick steers",
   },
-  lunge: {
-    title: "lunge to take",
-    body: "light also lives in other lanterns. lunge into one and contact drains it.",
-    keys: "click lunges",
-    touch: "tap to lunge",
-    pads: "the lunge button — or tap the water to aim",
+  jump: {
+    title: "jump to take",
+    body: "light also lives in other lanterns. jump into one and contact drains it.",
+    keys: "click jumps",
+    touch: "tap to jump",
+    pads: "the jump button · or tap the water to aim",
   },
-  shutter: {
+  hide: {
     title: "go dark",
-    body: "your glow is how far you are seen. shutter the lantern to vanish — it takes a moment.",
-    keys: "space shutters",
-    touch: "the lantern button shutters",
-    pads: "the small button shutters",
+    body: "your glow is how far you are seen. hide the lantern to vanish — it takes a moment.",
+    keys: "space hides",
+    touch: "the lantern button hides",
+    pads: "the small button hides",
   },
 };
 
 /**
  * The first-descent coach: one step at a time, retired by doing rather than by
  * dismissing. Deliberately pointer-transparent except for "skip" — the arena is
- * live underneath and a lunge aimed through this card must land.
+ * live underneath and a jump aimed through this card must land.
  */
 export function Tutorial({ state, selfId }: { state: TutorialState; selfId: number }) {
   // Light is the only step signal the player doesn't hand us directly, so it is
@@ -54,8 +54,11 @@ export function Tutorial({ state, selfId }: { state: TutorialState; selfId: numb
     if (light !== undefined) noteLight(light);
   }, [light]);
 
-  // same gate as the pads themselves — never name a control that isn't there
-  const padsOn = useControlScheme() === "pads" && useIsTouch();
+  // same gate as the pads themselves — never name a control that isn't there.
+  // Both hooks called unconditionally: see the note in App.tsx.
+  const scheme = useControlScheme();
+  const touch = useIsTouch();
+  const padsOn = scheme === "pads" && touch;
   const copy = state.step ? COPY[state.step] : null;
 
   return (

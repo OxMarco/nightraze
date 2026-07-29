@@ -5,9 +5,9 @@
    One corner, not two: the stick sits in the bottom-left with the action row
    directly above it, so the whole scheme occupies a single column and the rest
    of the water stays clear. The two buttons share a diameter — a row of unequal
-   circles reads as a mistake before it reads as a hierarchy — so the lunge is
+   circles reads as a mistake before it reads as a hierarchy — so the jump is
    marked as the primary by weight instead: a brighter rim, a hotter glow, and
-   the near-white of held light against the shutter's teal. Everything is kept
+   the near-white of held light against the hide button's teal. Everything is kept
    deliberately small: these are instruments laid over the arena, and the arena
    is the thing you are trying to see. */
 
@@ -59,7 +59,7 @@
   transition: opacity 0.12s, box-shadow 0.2s;
 }
 /* the icon is one colour and one opacity, both owned by the button: every
-   state (cooling down, shuttered, pressed) is a change to the control, and the
+   state (cooling down, hidden, pressed) is a change to the control, and the
    glyph follows it without needing a second set of art */
 .padBtn svg {
   width: 46%;
@@ -69,7 +69,7 @@
   transition: opacity 0.18s;
 }
 
-.padLunge {
+.padJump {
   left: calc(max(22px, env(safe-area-inset-left)) + 68px);
   bottom: calc(max(22px, env(safe-area-inset-bottom)) + 120px);
   width: 56px;
@@ -79,11 +79,11 @@
   background: radial-gradient(circle at 50% 45%, rgba(216, 255, 242, 0.16), rgba(1, 15, 14, 0.55) 70%);
   box-shadow: 0 0 30px rgba(90, 255, 220, 0.22);
 }
-.padLunge:active { box-shadow: 0 0 44px rgba(216, 255, 242, 0.5); }
+.padJump:active { box-shadow: 0 0 44px rgba(216, 255, 242, 0.5); }
 /* the flare is fuel (§7): dimmed while a press would spend light for nothing */
-.padLunge.spent { opacity: 0.32; }
+.padJump.spent { opacity: 0.32; }
 
-.padShutter {
+.padHide {
   left: max(22px, env(safe-area-inset-left));
   bottom: calc(max(22px, env(safe-area-inset-bottom)) + 120px);
   width: 56px;
@@ -93,10 +93,10 @@
   background: radial-gradient(circle at 50% 45%, rgba(90, 255, 220, 0.12), rgba(1, 15, 14, 0.5) 70%);
   box-shadow: 0 0 18px rgba(90, 255, 220, 0.16);
 }
-.padShutter:active { box-shadow: 0 0 30px rgba(90, 255, 220, 0.4); }
-/* shuttered: the glyph swaps sun for moon (in the markup) and the whole control
+.padHide:active { box-shadow: 0 0 30px rgba(90, 255, 220, 0.4); }
+/* hidden: the glyph swaps sun for moon (in the markup) and the whole control
    banks down, so the dark stance reads at a glance */
-.padShutter.off {
+.padHide.off {
   --icon-op: 0.5;
   border-color: rgba(90, 255, 220, 0.2);
   box-shadow: none;
@@ -111,13 +111,13 @@
 @media (max-width: 380px), (max-height: 460px) {
   .padStick { width: 92px; height: 92px; }
   .padKnob { width: 40px; height: 40px; }
-  .padLunge {
+  .padJump {
     width: 50px;
     height: 50px;
     left: calc(max(22px, env(safe-area-inset-left)) + 60px);
     bottom: calc(max(22px, env(safe-area-inset-bottom)) + 104px);
   }
-  .padShutter {
+  .padHide {
     width: 50px;
     height: 50px;
     bottom: calc(max(22px, env(safe-area-inset-bottom)) + 104px);

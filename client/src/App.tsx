@@ -74,9 +74,14 @@ function Arena() {
   const selfId = status.state === "open" || status.state === "dead" ? status.playerId : 0;
   const worldSize = status.state === "open" || status.state === "dead" ? status.worldSize : 2600;
 
-  // capability gates the scheme: a stored "pads" preference that follows a
-  // browser profile onto a mouse-only desktop must not put thumb pads on screen
-  const padsOn = useControlScheme() === "pads" && useIsTouch();
+  // Capability gates the scheme: thumb pads are for thumbs, and a mouse-only
+  // desktop steers with the cursor and hides with Space/L — it has no use
+  // for a stick it would have to drag. Both hooks are called unconditionally;
+  // `&&` between the calls would short-circuit useIsTouch away and change the
+  // hook count the moment the scheme flips.
+  const scheme = useControlScheme();
+  const touch = useIsTouch();
+  const padsOn = scheme === "pads" && touch;
 
   // the three verbs, taught once per browser (game/tutorial.ts)
   const tutorial = useTutorial();
@@ -137,9 +142,9 @@ function Arena() {
     [client],
   );
 
-  // input: pointer steers, click/tap lunges, keys toggle the lantern.
+  // input: pointer steers, click/tap jumps, keys toggle the lantern.
   // Under the pad scheme the stick owns steering, so a touch on the water is
-  // only ever a candidate tap — but the tap still lunges, and still lunges
+  // only ever a candidate tap — but the tap still jumps, and still jumps
   // *toward the touch point*, which is what keeps the aimed ambush strike (§9)
   // instead of trading it for a button that can only fire along the heading.
   useEffect(() => {
@@ -254,8 +259,8 @@ function LanternButton() {
     <button
       type="button"
       className="lanternBtn ui"
-      title="Shutter (Space / L)"
-      aria-label="Shutter lantern"
+      title="Hide (Space / L)"
+      aria-label="Hide lantern"
       onClick={(ev) => {
         ev.stopPropagation();
         client.sendToggle();

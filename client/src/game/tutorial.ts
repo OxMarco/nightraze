@@ -1,12 +1,12 @@
 /* The first descent, taught in three beats.
    Players who arrive cold can see a glowing blob and a dark screen and never
-   discover that the three verbs (eat, lunge, shutter) are the whole game. This
+   discover that the three verbs (eat, jump, hide) are the whole game. This
    walks them through those verbs once, in order, and then never appears again.
 
    It teaches by watching the arena, not by gating it: nothing here blocks
    input, pauses the sim, or talks to the server. A step is retired when the
    player actually does the thing — eats their way past the starter ember,
-   lunges, shutters — so the prompt is on screen for exactly as long as it is
+   jumps, hides — so the prompt is on screen for exactly as long as it is
    still unanswered. Sequential on purpose: an out-of-order action does not
    retire a step whose text has not been read yet.
 
@@ -33,9 +33,9 @@ const CLOSING_MS = 4500;
     eaten, hunted, and hidden already. */
 const KNOWS_BEST = 40;
 
-export type TutorialStep = "feed" | "lunge" | "shutter";
+export type TutorialStep = "feed" | "jump" | "hide";
 
-const ORDER: readonly TutorialStep[] = ["feed", "lunge", "shutter"];
+const ORDER: readonly TutorialStep[] = ["feed", "jump", "hide"];
 
 export interface TutorialState {
   /** The step being taught, or null when there is nothing left to teach. */
@@ -114,14 +114,14 @@ export function noteLight(light: number): void {
   if (light >= FED_LIGHT) advance("feed");
 }
 
-/** The player lunged. */
+/** The player jumped. */
 export function noteDash(): void {
-  advance("lunge");
+  advance("jump");
 }
 
-/** The player worked the lantern shutter. */
+/** The player hid the lantern. */
 export function noteToggle(): void {
-  advance("shutter");
+  advance("hide");
 }
 
 /** "i know how to play" — dismissed for good, with no sign-off. */

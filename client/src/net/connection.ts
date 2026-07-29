@@ -248,12 +248,12 @@ export class GameClient {
     this.ws.send(toBinary(ClientMessageSchema, create(ClientMessageSchema, msg)));
   }
 
-  /** Shutter / relight the lantern. */
+  /** Hide / show the lantern. */
   sendToggle(): void {
     this.sendAction({ msg: { case: "toggle", value: {} } });
   }
 
-  /** Flare lunge toward a direction (screen-relative vector is fine). */
+  /** Flare jump toward a direction (screen-relative vector is fine). */
   sendDash(tx: number, ty: number): void {
     this.sendAction({ msg: { case: "dash", value: { tx, ty } } });
   }

@@ -61,7 +61,7 @@ export function StartScreen() {
         <p className="rules">
           motes grow your <b>light</b> · it is your score, your health, and how far you're seen
           <br />
-          <b>shutter</b> to go dark, but it takes a moment
+          <b>hide</b> to go dark, but it takes a moment
           <br />
           contact <b>drains</b> · drain a lantern dry to snuff it
         </p>
@@ -92,12 +92,12 @@ export function StartScreen() {
         )}
         <div className="modalControls">
           <span className="keys">
-            cursor steers · <kbd>click</kbd> lunges · <kbd>space</kbd> shutters
+            <kbd>cursor</kbd> steers · <kbd>click</kbd> jumps · <kbd>space</kbd> hides
           </span>
           <span className="touch">
             {scheme === "pads"
-              ? "stick steers · lunge and shutter buttons · tap the water to aim a lunge"
-              : "drag steers · tap lunges · lantern button shutters"}
+              ? "stick steers · jump and hide buttons · tap the water to aim a jump"
+              : "drag steers · tap jumps · lantern button hides"}
           </span>
         </div>
         {touch && (
@@ -105,17 +105,17 @@ export function StartScreen() {
             <span className="schemeLbl">touch controls</span>
             <button
               type="button"
-              className={"schemeOpt" + (scheme === "one-finger" ? " on" : "")}
-              onClick={() => setScheme("one-finger")}
-            >
-              one finger
-            </button>
-            <button
-              type="button"
               className={"schemeOpt" + (scheme === "pads" ? " on" : "")}
               onClick={() => setScheme("pads")}
             >
               stick + buttons
+            </button>
+            <button
+              type="button"
+              className={"schemeOpt" + (scheme === "one-finger" ? " on" : "")}
+              onClick={() => setScheme("one-finger")}
+            >
+              one finger
             </button>
           </div>
         )}

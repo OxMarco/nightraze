@@ -9,6 +9,16 @@
   --slate: rgba(180, 208, 205, 0.75);
   --slate-dim: rgba(150, 185, 190, 0.45);
   --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Named once because two boxes have to agree on them: the backdrop pads its
+     content by these, and the ripple field re-applies them so the rings center
+     on the same rectangle the type does. On a notched phone these are not
+     symmetric — top 47 vs bottom 34, and left != right in landscape — so a
+     field that ignored them sat visibly off-center from the core. */
+  --modal-pad-t: max(24px, env(safe-area-inset-top));
+  --modal-pad-r: max(16px, env(safe-area-inset-right));
+  --modal-pad-b: max(24px, env(safe-area-inset-bottom));
+  --modal-pad-l: max(16px, env(safe-area-inset-left));
 }
 
 .modalBackdrop {
@@ -18,12 +28,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* short viewports (landscape phones) scroll instead of clipping the core */
-  overflow-y: auto;
-  overflow-x: hidden;
-  touch-action: pan-y;
-  padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
-    max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  overflow: hidden;
+  /* The backdrop must NOT be the scroll container. An absolutely positioned
+     child (.rippleField) is sized to the scrollport while the in-flow core is
+     centered in the scrollable content — so the moment the modal grew taller
+     than the viewport the rings and the type centered on different boxes, and
+     drifted further apart with every pixel scrolled. The core carries its own
+     overflow instead (see .modalCore). */
+  padding: var(--modal-pad-t) var(--modal-pad-r) var(--modal-pad-b) var(--modal-pad-l);
   background: radial-gradient(ellipse at 50% 50%, #030d12, #010407 80%);
 }
 .modalBackdrop.seeThrough {
@@ -37,14 +49,23 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /* inset:0 resolves to the backdrop's *padding* box, which skips the padding
+     the core is centered inside — so the field re-applies it and centers the
+     rings on the content box, concentric with the type at every inset. */
+  box-sizing: border-box;
+  padding: var(--modal-pad-t) var(--modal-pad-r) var(--modal-pad-b) var(--modal-pad-l);
+  display: grid;
+  place-items: center;
 }
 .ring {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 640px;
-  height: 400px;
-  margin: -200px 0 0 -320px;
+  /* all three rings share one grid cell and are centered by the grid, so the
+     centering no longer restates half the ring's size as a negative margin —
+     that pair silently broke centering whenever the size below changed */
+  grid-area: 1 / 1;
+  /* keeps the 1.6:1 ellipse but stops a 640px ring from being clipped on a
+     390px phone, where only the middle of the arc was ever visible */
+  width: min(640px, 88vw);
+  height: calc(min(640px, 88vw) / 1.6);
   border: 1px solid rgba(90, 255, 220, 0.4);
   border-radius: 50%;
   animation: rippleOut 6s linear infinite;
@@ -73,8 +94,17 @@
   position: relative;
   z-index: 2;
   max-width: 420px;
-  /* margin:auto keeps it centered but never clipped when taller than the viewport */
   margin: auto;
+  /* the core scrolls, not the backdrop: short viewports (landscape phones)
+     still reach every control, but the rings behind stay pinned to the center
+     of the screen instead of sliding out from under the type */
+  max-height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  touch-action: pan-y;
+  /* room for the focus ring on the first and last controls, which a scroll
+     container would otherwise clip */
+  padding: 4px;
   text-align: center;
   animation: coreIn 0.6s ease-out both;
 }

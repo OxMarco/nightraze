@@ -102,7 +102,7 @@
 @media (pointer: coarse) {
   .coachKey .coachKeys { display: none; }
   .coachKey .coachTouch { display: inline; }
-  /* clear the shutter button, which owns the bottom-right corner on touch */
+  /* clear the hide button, which owns the bottom-right corner on touch */
   .coach { bottom: calc(max(14px, env(safe-area-inset-bottom)) + 96px); }
 }
 /* the pad scheme stacks a stick and an action row up the left edge, so the card

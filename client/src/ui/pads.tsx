@@ -4,13 +4,13 @@ import { noteDash, noteToggle } from "../game/tutorial.js";
 import { REF } from "../render/core.js";
 import "./pads.css";
 
-/* The opt-in two-thumb scheme (§9): a stick on the left, lunge and shutter on
+/* The opt-in two-thumb scheme (§9): a stick on the left, jump and hide on
    the right. Two buttons rather than one overloaded button, on purpose — the
    two verbs have opposite timing profiles, and any short/long or multi-press
-   scheme makes a touch-down ambiguous until its timer expires. The lunge is the
+   scheme makes a touch-down ambiguous until its timer expires. The jump is the
    fastest verb in the game and the ambush strike; it cannot wait behind a
    disambiguation window. §9 already rejected both directions of that trade
-   (double-tap-to-lunge "adds latency to the fastest verb"; hold-to-douse
+   (double-tap-to-jump "adds latency to the fastest verb"; hold-to-douse
    "imposed release-latency in the unified-button variant"), so the buttons are
    separated in space instead of in time — which also means neither has to be
    explained, the failure that cost vent-light its place (§8). */
@@ -22,7 +22,7 @@ const DEADZONE_FRAC = 0.16;
 
 export function TouchPads({ selfId }: { selfId: number }) {
   const client = useGameClient();
-  // The stick's heading, remembered so the lunge button has something to aim
+  // The stick's heading, remembered so the jump button has something to aim
   // along when the thumb is off the stick. Screen-space, like every other
   // vector the client sends.
   const headingRef = useRef({ x: 0, y: -1 });
@@ -35,13 +35,13 @@ export function TouchPads({ selfId }: { selfId: number }) {
     [client],
   );
 
-  const lunge = useCallback(() => {
+  const jump = useCallback(() => {
     const { x, y } = headingRef.current;
     client.sendDash(x, y);
     noteDash();
   }, [client]);
 
-  const shutter = useCallback(() => {
+  const hide = useCallback(() => {
     client.sendToggle();
     noteToggle();
   }, [client]);
@@ -49,7 +49,7 @@ export function TouchPads({ selfId }: { selfId: number }) {
   return (
     <>
       <Stick onSteer={steer} />
-      <ActionButtons selfId={selfId} onLunge={lunge} onShutter={shutter} />
+      <ActionButtons selfId={selfId} onJump={jump} onHide={hide} />
     </>
   );
 }
@@ -140,8 +140,8 @@ const FEATHER = {
   focusable: false,
 } as const;
 
-/** Feather `chevrons-up` — the flare lunge: a burst forward, not a stance. */
-function LungeIcon() {
+/** Feather `chevrons-up` — the flare jump: a burst forward, not a stance. */
+function JumpIcon() {
   return (
     <svg {...FEATHER}>
       <polyline points="17 11 12 6 7 11" />
@@ -150,7 +150,7 @@ function LungeIcon() {
   );
 }
 
-/** Feather `sun` while the lantern burns, `moon` once it is shuttered — so the
+/** Feather `sun` while the lantern burns, `moon` once it is hidden — so the
     button reports the stance it is about to change. */
 function LanternIcon({ lit }: { lit: boolean }) {
   if (!lit) {
@@ -178,14 +178,14 @@ function LanternIcon({ lit }: { lit: boolean }) {
 // ---------------------------------------------------------------- buttons
 function ActionButtons({
   selfId,
-  onLunge,
-  onShutter,
+  onJump,
+  onHide,
 }: {
   selfId: number;
-  onLunge: () => void;
-  onShutter: () => void;
+  onJump: () => void;
+  onHide: () => void;
 }) {
-  // The lunge costs light whether or not it connects (§7), so the button says
+  // The jump costs light whether or not it connects (§7), so the button says
   // when it would be spent for nothing; the lantern says which way it is about
   // to swing. Sampled, not per-frame: these are classes, not animations.
   const frame = useWorldStateThrottled(120);
@@ -197,29 +197,29 @@ function ActionButtons({
     <>
       <button
         type="button"
-        className={"padBtn padLunge ui" + (spent ? " spent" : "")}
-        aria-label="Lunge"
-        title="Lunge"
+        className={"padBtn padJump ui" + (spent ? " spent" : "")}
+        aria-label="Jump"
+        title="Jump"
         // fires on touch-down, with no disambiguation window in front of it —
         // that is the entire argument for two buttons
         onPointerDown={(ev) => {
           ev.preventDefault();
           ev.stopPropagation();
-          onLunge();
+          onJump();
         }}
       >
-        <LungeIcon />
+        <JumpIcon />
       </button>
       <button
         type="button"
-        className={"padBtn padShutter ui" + (lit ? "" : " off")}
-        aria-label={lit ? "Shutter lantern" : "Relight lantern"}
-        title={lit ? "Shutter" : "Relight"}
+        className={"padBtn padHide ui" + (lit ? "" : " off")}
+        aria-label={lit ? "Hide lantern" : "Show lantern"}
+        title={lit ? "Hide" : "Show"}
         // a stance change, not a reflex: click semantics are fine here, and
         // keep the button reachable by assistive tech
         onClick={(ev) => {
           ev.stopPropagation();
-          onShutter();
+          onHide();
         }}
       >
         <LanternIcon lit={lit} />
