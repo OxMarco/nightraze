@@ -354,8 +354,7 @@ export function MetricsDashboard() {
     const request = ++requestEpoch.current;
     if (background) setRefreshing(true); else setLoading(true);
     try {
-      const response = await fetch("/metrics", {
-        headers: { "x-metrics-token": candidate },
+      const response = await fetch(`/metrics?token=${encodeURIComponent(candidate)}`, {
         cache: "no-store",
       });
       if (response.status === 403) throw new Error("That token was not accepted.");

@@ -99,7 +99,7 @@ Set a long random `METRICS_TOKEN` in `.env` to enable the aggregate-only read
 route, restart the app, then query it without exposing identifiers or IPs:
 
 ```sh
-curl -sS https://DOMAIN/metrics -H "x-metrics-token: $METRICS_TOKEN"
+curl -sS --get --data-urlencode "token=$METRICS_TOKEN" https://DOMAIN/metrics
 ```
 
 For the visual dashboard, open `https://DOMAIN/metrics-dashboard` and enter the
