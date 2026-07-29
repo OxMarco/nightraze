@@ -25,6 +25,8 @@ async function startServer() {
       MAX_PLAYERS: "2",
       BOT_POP_TARGET: "0",   // the deterministic checks need an empty arena
       BAN_DB_PATH: ":memory:",
+      METRICS_DB_PATH: ":memory:",
+      METRICS_TOKEN: "integration-metrics-token",
       ALLOWED_ORIGINS: "https://allowed.example",
     },
     stdio: ["ignore", "ignore", "pipe"],
@@ -84,6 +86,11 @@ function makeClient(name, base = wsBase) {
   ws.binaryType = "arraybuffer";
   const c = { ws, welcome: null, snaps: [], dead: null, tuning: null, error: null };
   ws.on("error", (err) => { c.error = err; });
+  ws.on("open", () => {
+    c.send({ msg: { case: "telemetry", value: {
+      visitorId: `integration-${name}-visitor`, timezone: "Europe/Malta",
+    } } });
+  });
   ws.on("message", (data) => {
     const msg = fromBinary(ServerMessageSchema, new Uint8Array(data));
     if (msg.msg.case === "welcome") c.welcome = msg.msg.value;
@@ -118,6 +125,40 @@ check("health reports a live authoritative simulation",
   live.ok === true && live.simulation?.ticks > 0 && live.simulation?.tickAgeMs >= 0,
   JSON.stringify(live.simulation));
 if (ownsServer) {
+  const deniedMetrics = await fetch(`${httpBase}/metrics`);
+  check("product metrics require their token", deniedMetrics.status === 403,
+    `status=${deniedMetrics.status}`);
+  const metrics = await (await fetch(`${httpBase}/metrics`, {
+    headers: { "x-metrics-token": "integration-metrics-token" },
+  })).json();
+  check("product metrics count the connected anonymous user",
+    metrics.currentPlaying === 1 && metrics.dailyActiveUsers?.at(-1)?.users === 1 &&
+      metrics.locations?.[0]?.location === "timezone:Europe/Malta",
+    JSON.stringify(metrics));
+  const crash = await fetch(`${httpBase}/telemetry/crash`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ visitorId: "integration-alpha-visitor", kind: "window-error" }),
+  });
+  check("browser crash reports are accepted", crash.status === 204, `status=${crash.status}`);
+  const invalidCrash = await fetch(`${httpBase}/telemetry/crash`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ visitorId: "integration-alpha-visitor", kind: "invented-kind" }),
+  });
+  check("browser crash categories are allow-listed", invalidCrash.status === 400,
+    `status=${invalidCrash.status}`);
+  const crashBurst = [];
+  for (let i = 0; i < 6; i++) {
+    crashBurst.push(await fetch(`${httpBase}/telemetry/crash`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ visitorId: "integration-alpha-visitor", kind: "window-error" }),
+    }));
+  }
+  check("browser crash reports are rate-limited",
+    crashBurst.some((response) => response.status === 429),
+    `statuses=${crashBurst.map((response) => response.status).join(",")}`);
   // the tuning route is a playtest instrument: absent unless TUNE_TOKEN is set
   const tune = await fetch(`${httpBase}/tune`, {
     method: "POST",
@@ -182,18 +223,6 @@ while (a.self().light < 20 && farmSteps < 250) {
   farmSteps++;
 }
 check("eating grows light server-side", a.self().light >= 18, "L=" + a.self().light.toFixed(1));
-
-// vent: loose motes appear
-const Lv = a.self().light;
-if (Lv > 16) {
-  a.send({ msg: { case: "vent", value: {} } });
-  await sleep(300);
-  check("vent sheds ~27% into loose motes",
-    a.self().light < Lv - 1 && a.last().loose.length > 0,
-    `L=${a.self().light.toFixed(1)} loose=${a.last().loose.length}`);
-} else {
-  check("vent guard: too dim to vent (skipped farm-dependent check)", true);
-}
 
 // second client: perception isolation at spawn distance
 const b = makeClient("beta");

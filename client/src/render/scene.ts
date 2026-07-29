@@ -105,9 +105,6 @@ export class SceneRenderer {
         case EffectKind.DOUSE:
           this.fx.push({ type: "stain", x: e.x, y: e.y, life: 0.4, max: 0.4, r: e.m || 120 });
           break;
-        case EffectKind.VENT:
-          this.fx.push({ type: "wake", x: e.x, y: e.y, life: 0.5, max: 0.5, r: 16, r1: e.m || 70 });
-          break;
         case EffectKind.BUMP:
           this.fx.push({ type: "wake", x: e.x, y: e.y, life: 0.5, max: 0.5, r: 10, r1: e.m || 40 });
           break;
@@ -223,7 +220,7 @@ export class SceneRenderer {
       ctx.fill();
     }
 
-    // loose plasma — spilled/vented wealth
+    // loose plasma — spilled wealth
     for (const m of frame.loose) {
       if (!inView(m)) continue;
       const r = 2.2 + Math.sqrt(m.value) * 1.5;

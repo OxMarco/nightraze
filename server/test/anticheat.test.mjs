@@ -102,7 +102,7 @@ test("legitimate traffic never accumulates strikes", () => {
     room.handleMessage(player, frame({ msg: { case: "input", value: { tx: 10, ty: 5 } } }), true);
   }
   room.handleMessage(player, frame({ msg: { case: "toggle", value: {} } }), true);
-  room.handleMessage(player, frame({ msg: { case: "vent", value: {} } }), true);
+  room.handleMessage(player, frame({ msg: { case: "dash", value: { tx: 1, ty: 0 } } }), true);
 
   assert.equal(player.strikes, 0);
   assert.equal(socket.closed, null);

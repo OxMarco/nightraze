@@ -1,10 +1,12 @@
 import Fastify, { LogController } from "fastify";
 import websocket from "@fastify/websocket";
 import fastifyStatic from "@fastify/static";
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { join, sep } from "node:path";
 import { Room } from "./game/room.js";
 import { IpBanStore } from "./ip-ban-store.js";
+import { MetricsStore } from "./metrics-store.js";
 import { NO_FRAMING, embedFrameAncestors } from "./embedding.js";
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -76,18 +78,65 @@ const GLOW_G = finiteEnv("GLOW_G", 6);                          // §10 lever 1 
 // instrument, not a game feature, and moving G changes what every player can
 // hide from. No token, no route.
 const TUNE_TOKEN = process.env.TUNE_TOKEN ?? "";
+const METRICS_TOKEN = process.env.METRICS_TOKEN ?? "";
+const CRASH_REPORT_WINDOW_MS = 60_000;
+const CRASH_REPORTS_PER_IP = 6;
+const CRASH_REPORTS_GLOBAL = 120;
+const BROWSER_CRASH_KINDS = new Set([
+  "window-error",
+  "unhandled-rejection",
+  "react-render",
+]);
 const connsByIp = new Map<string, number>();
 const liveSockets = new Set<import("ws").WebSocket>();
+const crashReportsByIp = new Map<string, { startedAt: number; count: number }>();
+let globalCrashReports = { startedAt: 0, count: 0 };
 let shuttingDown = false;
 
 // The room kicks on protocol violations but only knows player ids; the
 // transport layer maps them back to IPs and applies a temporary ban so a
 // kicked cheater can't just reconnect in the same breath.
 const ipByPlayer = new Map<number, string>();
+const sessionByPlayer = new Map<number, number>();
+const locationByPlayer = new Map<number, string>();
+const visitorByPlayer = new Map<number, string>();
 const banStore = new IpBanStore(process.env.BAN_DB_PATH ?? "./data/ip-bans.sqlite", {
   multiplier: CHEAT_BAN_MULTIPLIER,
   maxBanMs: CHEAT_BAN_MAX_SECONDS * 1_000,
   resetAfterMs: CHEAT_BAN_RESET_SECONDS * 1_000,
+});
+const metricsStore = new MetricsStore(process.env.METRICS_DB_PATH ?? "./data/metrics.sqlite");
+let metricsClosed = false;
+let metricsCleanupTimer: ReturnType<typeof setInterval> | null = null;
+function metric(operation: () => void): void {
+  if (metricsClosed) return;
+  try {
+    operation();
+  } catch (err) {
+    fastify.log.error({ err }, "failed to persist metric");
+  }
+}
+function closeMetrics(): void {
+  if (metricsClosed) return;
+  if (metricsCleanupTimer) {
+    clearInterval(metricsCleanupTimer);
+    metricsCleanupTimer = null;
+  }
+  // Close live sessions at shutdown time instead of leaving them permanently
+  // incomplete while WebSocket close callbacks race process termination.
+  for (const sessionId of sessionByPlayer.values()) {
+    metric(() => metricsStore.endSession(sessionId));
+  }
+  metricsClosed = true;
+  metricsStore.close();
+}
+metric(() => metricsStore.sweep());
+metricsCleanupTimer = setInterval(() => {
+  metric(() => metricsStore.sweep());
+}, 60 * 60_000);
+metricsCleanupTimer.unref();
+process.on("uncaughtExceptionMonitor", () => {
+  metric(() => metricsStore.recordCrash(null, "server-uncaught-exception"));
 });
 const banCleanupTimer = setInterval(() => {
   try {
@@ -95,6 +144,7 @@ const banCleanupTimer = setInterval(() => {
   } catch (err) {
     fastify.log.error({ err }, "failed to clean up expired IP bans");
   }
+  sweepCrashReportWindows();
 }, 60_000);
 banCleanupTimer.unref();
 fastify.log.info({ activeBans: banStore.activeCount() }, "IP ban store ready");
@@ -106,6 +156,7 @@ const room = new Room((player, reason) => {
   if (ip && ip !== "unknown") {
     try {
       const applied = banStore.ban(ip, CHEAT_BAN_SECONDS * 1_000);
+      metric(() => metricsStore.recordBan(applied.offenseCount, applied.durationMs));
       fastify.log.warn({
         ip,
         offenseCount: applied.offenseCount,
@@ -118,7 +169,33 @@ const room = new Room((player, reason) => {
       fastify.log.error({ err, ip }, "failed to persist IP ban");
     }
   }
-}, BOT_POP_TARGET);
+}, BOT_POP_TARGET, (player, rawVisitorId, timezone) => {
+  const sessionId = sessionByPlayer.get(player.id);
+  const rawId = validVisitorId(rawVisitorId);
+  if (!sessionId || !rawId) return;
+  const visitorId = anonymousVisitorHash(rawId);
+  const proxyLocation = locationByPlayer.get(player.id) ?? "unknown";
+  const location = proxyLocation.startsWith("country:")
+    ? proxyLocation
+    : clientLocation({}, timezone);
+  visitorByPlayer.set(player.id, visitorId);
+  locationByPlayer.set(player.id, location);
+  metric(() => metricsStore.identifySession(sessionId, visitorId, location));
+}, (player) => {
+  const sessionId = sessionByPlayer.get(player.id);
+  if (!sessionId) return;
+  metric(() => metricsStore.endSession(sessionId));
+  sessionByPlayer.delete(player.id);
+}, (player) => {
+  let sessionId = 0;
+  metric(() => {
+    sessionId = metricsStore.startSession(
+      visitorByPlayer.get(player.id) ?? null,
+      locationByPlayer.get(player.id) ?? "unknown",
+    );
+  });
+  if (sessionId !== 0) sessionByPlayer.set(player.id, sessionId);
+});
 if (room.setGlowG(GLOW_G) === null) {
   fastify.log.warn({ GLOW_G }, "GLOW_G out of range; keeping the reference curve");
 }
@@ -128,6 +205,56 @@ const allowedOrigins = new Set(
     .map((origin) => origin.trim())
     .filter(Boolean),
 );
+
+function validVisitorId(value: unknown): string | null {
+  return typeof value === "string" && /^[a-zA-Z0-9_-]{16,64}$/.test(value)
+    ? value
+    : null;
+}
+
+function anonymousVisitorHash(visitorId: string): string {
+  return createHash("sha256").update(visitorId).digest("base64url");
+}
+
+function allowCrashReport(ip: string, now = Date.now()): boolean {
+  if (now - globalCrashReports.startedAt >= CRASH_REPORT_WINDOW_MS) {
+    globalCrashReports = { startedAt: now, count: 0 };
+  }
+  const previous = crashReportsByIp.get(ip);
+  const perIp = !previous || now - previous.startedAt >= CRASH_REPORT_WINDOW_MS
+    ? { startedAt: now, count: 0 }
+    : previous;
+  if (globalCrashReports.count >= CRASH_REPORTS_GLOBAL || perIp.count >= CRASH_REPORTS_PER_IP) {
+    return false;
+  }
+  globalCrashReports.count++;
+  perIp.count++;
+  crashReportsByIp.set(ip, perIp);
+  return true;
+}
+
+function sweepCrashReportWindows(now = Date.now()): void {
+  for (const [ip, window] of crashReportsByIp) {
+    if (now - window.startedAt >= CRASH_REPORT_WINDOW_MS) crashReportsByIp.delete(ip);
+  }
+}
+
+function clientLocation(
+  headers: Record<string, string | string[] | undefined>,
+  timezone: string | null,
+): string {
+  // A country header is trusted only when explicitly configured. In production
+  // the app port is private behind the proxy; operators may configure a
+  // geo-aware proxy header without making client-supplied IPs analytics data.
+  const headerName = (process.env.GEO_COUNTRY_HEADER ?? "").trim().toLowerCase();
+  const header = headerName ? headers[headerName] : undefined;
+  const country = Array.isArray(header) ? header[0] : header;
+  if (country && /^[a-zA-Z]{2}$/.test(country)) return `country:${country.toUpperCase()}`;
+  if (timezone && timezone.length <= 64 && /^[a-zA-Z_+-]+(?:\/[a-zA-Z0-9_+-]+){1,2}$/.test(timezone)) {
+    return `timezone:${timezone}`;
+  }
+  return "unknown";
+}
 
 // Every document we serve declares who may frame it. /embed sets its own
 // permissive policy in its handler; this closes the door on everything else,
@@ -156,6 +283,37 @@ fastify.get("/health", { logLevel: "silent" }, async (_req, reply) => {
 });
 
 fastify.get("/leaderboard", async () => room.leaderboard());
+
+// Aggregates only; the underlying anonymous visitor and session rows are never
+// exposed over HTTP. With no token configured the route does not exist.
+if (METRICS_TOKEN) {
+  fastify.get("/metrics", async (req, reply) => {
+    if (req.headers["x-metrics-token"] !== METRICS_TOKEN) {
+      return reply.code(403).send({ error: "bad metrics token" });
+    }
+    reply.header("cache-control", "no-store");
+    return metricsStore.snapshot(room.activeHumanCount());
+  });
+  fastify.log.info("aggregate product metrics enabled at GET /metrics");
+}
+
+// Browser exceptions are intentionally reduced to a category. Messages,
+// stacks, URLs, names and IP addresses are not retained.
+fastify.post("/telemetry/crash", { bodyLimit: 4_096 }, async (req, reply) => {
+  const body = (req.body ?? {}) as { visitorId?: unknown; kind?: unknown };
+  const visitorId = validVisitorId(body.visitorId);
+  if (!visitorId) return reply.code(400).send({ error: "invalid visitor" });
+  const kind = typeof body.kind === "string" && BROWSER_CRASH_KINDS.has(body.kind)
+    ? body.kind
+    : null;
+  if (!kind) return reply.code(400).send({ error: "invalid crash kind" });
+  if (!allowCrashReport(req.ip || "unknown")) {
+    reply.header("retry-after", String(CRASH_REPORT_WINDOW_MS / 1_000));
+    return reply.code(429).send({ error: "crash report rate limit reached" });
+  }
+  metric(() => metricsStore.recordCrash(anonymousVisitorHash(visitorId), kind));
+  return reply.code(204).send();
+});
 
 // ---- Playtest tuning (§10 / §15 Q2) ----
 // POST /tune  { "g": 9 }  with header x-tune-token
@@ -217,9 +375,36 @@ fastify.get("/play", { websocket: true }, (socket, req) => {
 
   const url = new URL(req.url, "http://x");
   const name = url.searchParams.get("name");
+  const location = clientLocation(req.headers, null);
+  let sessionId = 0;
+  metric(() => { sessionId = metricsStore.startSession(null, location); });
+
+  // Browser WebSockets automatically answer control-frame pings with pongs.
+  // One outstanding sample at a time avoids treating a delayed pong as a newer
+  // measurement. RTT is aggregated; individual payloads are not stored.
+  let pingStartedAt: number | null = null;
+  const pingTimer = setInterval(() => {
+    if (socket.readyState !== 1 || pingStartedAt !== null) return;
+    pingStartedAt = performance.now();
+    try {
+      socket.ping();
+    } catch {
+      pingStartedAt = null;
+    }
+  }, 10_000);
+  pingTimer.unref();
+  socket.on("pong", () => {
+    const activeSessionId = sessionByPlayer.get(player.id);
+    if (pingStartedAt === null || !activeSessionId) return;
+    const pingMs = performance.now() - pingStartedAt;
+    pingStartedAt = null;
+    metric(() => metricsStore.recordPing(activeSessionId, pingMs));
+  });
 
   const player = room.addPlayer(socket, name);
   ipByPlayer.set(player.id, ip);
+  if (sessionId !== 0) sessionByPlayer.set(player.id, sessionId);
+  locationByPlayer.set(player.id, location);
   fastify.log.info({ id: player.id, name: player.name }, "player joined");
 
   socket.on("message", (data, isBinary) => {
@@ -227,9 +412,15 @@ fastify.get("/play", { websocket: true }, (socket, req) => {
   });
 
   socket.on("close", () => {
+    clearInterval(pingTimer);
+    const activeSessionId = sessionByPlayer.get(player.id);
+    if (activeSessionId) metric(() => metricsStore.endSession(activeSessionId));
     liveSockets.delete(socket);
     room.removePlayer(player.id);
     ipByPlayer.delete(player.id);
+    sessionByPlayer.delete(player.id);
+    locationByPlayer.delete(player.id);
+    visitorByPlayer.delete(player.id);
     const n = (connsByIp.get(ip) ?? 1) - 1;
     if (n <= 0) connsByIp.delete(ip);
     else connsByIp.set(ip, n);
@@ -299,6 +490,7 @@ try {
   fastify.log.error(err);
   clearInterval(banCleanupTimer);
   banStore.close();
+  closeMetrics();
   process.exit(1);
 }
 
@@ -313,6 +505,7 @@ for (const sig of ["SIGINT", "SIGTERM"] as const) {
     for (const socket of liveSockets) socket.close(1012, "service restart");
     clearInterval(banCleanupTimer);
     banStore.close();
+    closeMetrics();
     await fastify.close();
     process.exit(0);
   });

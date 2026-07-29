@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 
 // In dev the client runs on 5173 but talks same-origin, so proxy the game
 // server's routes to it. Bare-metal (`npm run dev`) it's localhost:3000; inside
@@ -28,7 +29,7 @@ const embedRoute: Plugin = {
 };
 
 export default defineConfig({
-  plugins: [react(), embedRoute],
+  plugins: [tailwindcss(), react(), embedRoute],
   build: {
     rollupOptions: {
       // Two documents, one app. index.html is nightraze.io itself; embed.html is
@@ -49,6 +50,8 @@ export default defineConfig({
       "/play": { target, ws: true },
       "/health": { target },
       "/leaderboard": { target },
+      "^/metrics$": { target },
+      "/telemetry": { target },
       "/tune": { target },
     },
   },

@@ -87,6 +87,41 @@ duration or delay repeatedly approaches 40 ms, when container memory stays over
 shared CPU, measure on the real VPS before increasing `MAX_PLAYERS`; start at 40
 and raise it only after a representative load test.
 
+## Product metrics
+
+Metrics are stored in `/data/metrics.sqlite` on the existing durable app volume.
+Set a long random `METRICS_TOKEN` in `.env` to enable the aggregate-only read
+route, restart the app, then query it without exposing identifiers or IPs:
+
+```sh
+curl -sS https://DOMAIN/metrics -H "x-metrics-token: $METRICS_TOKEN"
+```
+
+For the visual dashboard, open `https://DOMAIN/metrics-dashboard` and enter the
+same token. The token is kept in that browser tab's session storage, the view
+refreshes every 30 seconds, and locking the dashboard removes it immediately.
+
+The response reports current living players; DAU and coarse locations for
+the last 30 days; completed run count and mean active-run duration; 30-day
+mean and p95 WebSocket RTT; and 24-hour, 30-day, and lifetime ban/crash counts.
+A death ends a run, while respawn begins another. Disconnect ends a living run.
+Browser timezones provide coarse location by
+default. If a trusted geo-aware proxy adds a two-letter country header, set
+`GEO_COUNTRY_HEADER` to its lowercase header name to aggregate by country.
+Never configure this to an IP header: analytics stores no raw IPs, names, or
+raw browser IDs (the random browser ID is SHA-256 hashed before persistence).
+
+Browser render errors and unhandled errors/rejections are counted by category;
+messages, stack traces, URLs and user agents are discarded. Fatal uncaught
+server exceptions are also counted when SQLite remains writable. OOM kills,
+power loss and forced container termination require the external uptime monitor
+and cannot reliably be recorded by the dying process itself.
+
+Session, daily-user, and RTT detail older than 90 days is pruned hourly whether
+or not the dashboard is open. Lifetime ban and crash events are retained. The
+public browser-crash receiver accepts only the shipped error categories and is
+bounded per source IP and globally so it cannot become an unbounded write path.
+
 ## Portal embedding
 
 The game is listed on CrazyGames as an *iframe game*: they embed

@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file nightraze/v1/game.proto.
  */
 export const file_nightraze_v1_game: GenFile = /*@__PURE__*/
-  fileDesc("ChduaWdodHJhemUvdjEvZ2FtZS5wcm90bxIMbmlnaHRyYXplLnYxIvoBCg1DbGllbnRNZXNzYWdlEiwKBWlucHV0GAEgASgLMhsubmlnaHRyYXplLnYxLk1vdmVtZW50SW5wdXRIABItCgZ0b2dnbGUYAiABKAsyGy5uaWdodHJhemUudjEuVG9nZ2xlTGFudGVybkgAEikKBGRhc2gYAyABKAsyGS5uaWdodHJhemUudjEuRGFzaFJlcXVlc3RIABIpCgR2ZW50GAQgASgLMhkubmlnaHRyYXplLnYxLlZlbnRSZXF1ZXN0SAASLwoHcmVzcGF3bhgFIAEoCzIcLm5pZ2h0cmF6ZS52MS5SZXNwYXduUmVxdWVzdEgAQgUKA21zZyInCg1Nb3ZlbWVudElucHV0EgoKAnR4GAEgASgCEgoKAnR5GAIgASgCIg8KDVRvZ2dsZUxhbnRlcm4iJQoLRGFzaFJlcXVlc3QSCgoCdHgYASABKAISCgoCdHkYAiABKAIiDQoLVmVudFJlcXVlc3QiEAoOUmVzcGF3blJlcXVlc3QiuAEKDVNlcnZlck1lc3NhZ2USKAoHd2VsY29tZRgBIAEoCzIVLm5pZ2h0cmF6ZS52MS5XZWxjb21lSAASKgoIc25hcHNob3QYAiABKAsyFi5uaWdodHJhemUudjEuU25hcHNob3RIABIiCgRkZWFkGAMgASgLMhIubmlnaHRyYXplLnYxLkRlYWRIABImCgZ0dW5pbmcYBCABKAsyFC5uaWdodHJhemUudjEuVHVuaW5nSABCBQoDbXNnIhgKBlR1bmluZxIOCgZnbG93X2cYASABKAIiMAoHV2VsY29tZRIRCglwbGF5ZXJfaWQYASABKA0SEgoKd29ybGRfc2l6ZRgCIAEoDSImCgREZWFkEgoKAmJ5GAEgASgJEhIKCnBlYWtfbGlnaHQYAiABKAIiygEKCFNuYXBzaG90EhYKDnNlcnZlcl90aW1lX21zGAEgASgBEioKB3BsYXllcnMYAiADKAsyGS5uaWdodHJhemUudjEuUGxheWVyU3RhdGUSJgoFbW90ZXMYAyADKAsyFy5uaWdodHJhemUudjEuTW90ZVN0YXRlEisKBWxvb3NlGAQgAygLMhwubmlnaHRyYXplLnYxLkxvb3NlTW90ZVN0YXRlEiUKB2VmZmVjdHMYBSADKAsyFC5uaWdodHJhemUudjEuRWZmZWN0Ip0BCgtQbGF5ZXJTdGF0ZRIKCgJpZBgBIAEoDRIJCgF4GAIgASgCEgkKAXkYAyABKAISDQoFbGlnaHQYBCABKAISCwoDbGl0GAUgASgIEhAKCHJldmVhbF90GAYgASgCEhAKCHNoaWVsZGVkGAcgASgIEg0KBXNwZWVkGAggASgCEgwKBG5hbWUYCSABKAkSDwoHZGFzaF9jZBgKIAEoAiItCglNb3RlU3RhdGUSCgoCaWQYASABKA0SCQoBeBgCIAEoAhIJCgF5GAMgASgCIlMKDkxvb3NlTW90ZVN0YXRlEgoKAmlkGAEgASgNEgkKAXgYAiABKAISCQoBeRgDIAEoAhINCgV2YWx1ZRgEIAEoAhIQCghzZXR0bGluZxgFIAEoCCJRCgZFZmZlY3QSJgoEa2luZBgBIAEoDjIYLm5pZ2h0cmF6ZS52MS5FZmZlY3RLaW5kEgkKAXgYAiABKAISCQoBeRgDIAEoAhIJCgFtGAQgASgCKmoKCkVmZmVjdEtpbmQSGwoXRUZGRUNUX0tJTkRfVU5TUEVDSUZJRUQQABIICgRCVVJOEAESCQoFU05VRkYQAhIJCgVET1VTRRADEggKBEJVTVAQBBIICgRWRU5UEAUSCwoHU0hJTU1FUhAGYgZwcm90bzM");
+  fileDesc("ChduaWdodHJhemUvdjEvZ2FtZS5wcm90bxIMbmlnaHRyYXplLnYxIogCCg1DbGllbnRNZXNzYWdlEiwKBWlucHV0GAEgASgLMhsubmlnaHRyYXplLnYxLk1vdmVtZW50SW5wdXRIABItCgZ0b2dnbGUYAiABKAsyGy5uaWdodHJhemUudjEuVG9nZ2xlTGFudGVybkgAEikKBGRhc2gYAyABKAsyGS5uaWdodHJhemUudjEuRGFzaFJlcXVlc3RIABIvCgdyZXNwYXduGAUgASgLMhwubmlnaHRyYXplLnYxLlJlc3Bhd25SZXF1ZXN0SAASMQoJdGVsZW1ldHJ5GAYgASgLMhwubmlnaHRyYXplLnYxLlRlbGVtZXRyeUhlbGxvSABCBQoDbXNnSgQIBBAFIicKDU1vdmVtZW50SW5wdXQSCgoCdHgYASABKAISCgoCdHkYAiABKAIiDwoNVG9nZ2xlTGFudGVybiIlCgtEYXNoUmVxdWVzdBIKCgJ0eBgBIAEoAhIKCgJ0eRgCIAEoAiIQCg5SZXNwYXduUmVxdWVzdCI2Cg5UZWxlbWV0cnlIZWxsbxISCgp2aXNpdG9yX2lkGAEgASgJEhAKCHRpbWV6b25lGAIgASgJIrgBCg1TZXJ2ZXJNZXNzYWdlEigKB3dlbGNvbWUYASABKAsyFS5uaWdodHJhemUudjEuV2VsY29tZUgAEioKCHNuYXBzaG90GAIgASgLMhYubmlnaHRyYXplLnYxLlNuYXBzaG90SAASIgoEZGVhZBgDIAEoCzISLm5pZ2h0cmF6ZS52MS5EZWFkSAASJgoGdHVuaW5nGAQgASgLMhQubmlnaHRyYXplLnYxLlR1bmluZ0gAQgUKA21zZyIYCgZUdW5pbmcSDgoGZ2xvd19nGAEgASgCIjAKB1dlbGNvbWUSEQoJcGxheWVyX2lkGAEgASgNEhIKCndvcmxkX3NpemUYAiABKA0iJgoERGVhZBIKCgJieRgBIAEoCRISCgpwZWFrX2xpZ2h0GAIgASgCIsoBCghTbmFwc2hvdBIWCg5zZXJ2ZXJfdGltZV9tcxgBIAEoARIqCgdwbGF5ZXJzGAIgAygLMhkubmlnaHRyYXplLnYxLlBsYXllclN0YXRlEiYKBW1vdGVzGAMgAygLMhcubmlnaHRyYXplLnYxLk1vdGVTdGF0ZRIrCgVsb29zZRgEIAMoCzIcLm5pZ2h0cmF6ZS52MS5Mb29zZU1vdGVTdGF0ZRIlCgdlZmZlY3RzGAUgAygLMhQubmlnaHRyYXplLnYxLkVmZmVjdCKdAQoLUGxheWVyU3RhdGUSCgoCaWQYASABKA0SCQoBeBgCIAEoAhIJCgF5GAMgASgCEg0KBWxpZ2h0GAQgASgCEgsKA2xpdBgFIAEoCBIQCghyZXZlYWxfdBgGIAEoAhIQCghzaGllbGRlZBgHIAEoCBINCgVzcGVlZBgIIAEoAhIMCgRuYW1lGAkgASgJEg8KB2Rhc2hfY2QYCiABKAIiLQoJTW90ZVN0YXRlEgoKAmlkGAEgASgNEgkKAXgYAiABKAISCQoBeRgDIAEoAiJTCg5Mb29zZU1vdGVTdGF0ZRIKCgJpZBgBIAEoDRIJCgF4GAIgASgCEgkKAXkYAyABKAISDQoFdmFsdWUYBCABKAISEAoIc2V0dGxpbmcYBSABKAgiUQoGRWZmZWN0EiYKBGtpbmQYASABKA4yGC5uaWdodHJhemUudjEuRWZmZWN0S2luZBIJCgF4GAIgASgCEgkKAXkYAyABKAISCQoBbRgEIAEoAipmCgpFZmZlY3RLaW5kEhsKF0VGRkVDVF9LSU5EX1VOU1BFQ0lGSUVEEAASCAoEQlVSThABEgkKBVNOVUZGEAISCQoFRE9VU0UQAxIICgRCVU1QEAQSCwoHU0hJTU1FUhAGIgQIBRAFYgZwcm90bzM");
 
 /**
  * @generated from message nightraze.v1.ClientMessage
@@ -39,16 +39,16 @@ export type ClientMessage = Message<"nightraze.v1.ClientMessage"> & {
     case: "dash";
   } | {
     /**
-     * @generated from field: nightraze.v1.VentRequest vent = 4;
-     */
-    value: VentRequest;
-    case: "vent";
-  } | {
-    /**
      * @generated from field: nightraze.v1.RespawnRequest respawn = 5;
      */
     value: RespawnRequest;
     case: "respawn";
+  } | {
+    /**
+     * @generated from field: nightraze.v1.TelemetryHello telemetry = 6;
+     */
+    value: TelemetryHello;
+    case: "telemetry";
   } | { case: undefined; value?: undefined };
 };
 
@@ -122,19 +122,6 @@ export const DashRequestSchema: GenMessage<DashRequest> = /*@__PURE__*/
   messageDesc(file_nightraze_v1_game, 3);
 
 /**
- * @generated from message nightraze.v1.VentRequest
- */
-export type VentRequest = Message<"nightraze.v1.VentRequest"> & {
-};
-
-/**
- * Describes the message nightraze.v1.VentRequest.
- * Use `create(VentRequestSchema)` to create a new message.
- */
-export const VentRequestSchema: GenMessage<VentRequest> = /*@__PURE__*/
-  messageDesc(file_nightraze_v1_game, 4);
-
-/**
  * @generated from message nightraze.v1.RespawnRequest
  */
 export type RespawnRequest = Message<"nightraze.v1.RespawnRequest"> & {
@@ -145,6 +132,31 @@ export type RespawnRequest = Message<"nightraze.v1.RespawnRequest"> & {
  * Use `create(RespawnRequestSchema)` to create a new message.
  */
 export const RespawnRequestSchema: GenMessage<RespawnRequest> = /*@__PURE__*/
+  messageDesc(file_nightraze_v1_game, 4);
+
+/**
+ * Sent once after the socket opens. The random visitor id supports DAU without
+ * accounts or personal data; timezone is retained only as a coarse location.
+ *
+ * @generated from message nightraze.v1.TelemetryHello
+ */
+export type TelemetryHello = Message<"nightraze.v1.TelemetryHello"> & {
+  /**
+   * @generated from field: string visitor_id = 1;
+   */
+  visitorId: string;
+
+  /**
+   * @generated from field: string timezone = 2;
+   */
+  timezone: string;
+};
+
+/**
+ * Describes the message nightraze.v1.TelemetryHello.
+ * Use `create(TelemetryHelloSchema)` to create a new message.
+ */
+export const TelemetryHelloSchema: GenMessage<TelemetryHello> = /*@__PURE__*/
   messageDesc(file_nightraze_v1_game, 5);
 
 /**
@@ -301,7 +313,7 @@ export type Snapshot = Message<"nightraze.v1.Snapshot"> & {
   motes: MoteState[];
 
   /**
-   * spilled/vented plasma, variable value
+   * spilled plasma, variable value
    *
    * @generated from field: repeated nightraze.v1.LooseMoteState loose = 4;
    */
@@ -534,13 +546,6 @@ export enum EffectKind {
    * @generated from enum value: BUMP = 4;
    */
   BUMP = 4,
-
-  /**
-   * vent whoosh ring
-   *
-   * @generated from enum value: VENT = 5;
-   */
-  VENT = 5,
 
   /**
    * a dark mover's wake ring (§6)

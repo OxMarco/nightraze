@@ -7,11 +7,15 @@ import {
   useWorldFrames,
   useWorldStateThrottled,
 } from "./game/hooks.js";
+import { useControlScheme, useIsTouch } from "./game/controls.js";
 import { confirmName, isNamePending } from "./game/prefs.js";
+import { beginTutorial, noteDash, noteToggle, useTutorial } from "./game/tutorial.js";
 import { platform } from "./platform/current.js";
 import { SceneRenderer } from "./render/scene.js";
 import { REF } from "./render/core.js";
 import { BounceScreen, DeathOverlay, StartScreen } from "./ui/modals.js";
+import { TouchPads } from "./ui/pads.js";
+import { Tutorial } from "./ui/tutorial.js";
 
 // Same-origin: in production the game server itself serves this bundle behind
 // Traefik, and locally the Vite dev server proxies /play and the HTTP API
@@ -70,6 +74,16 @@ function Arena() {
   const selfId = status.state === "open" || status.state === "dead" ? status.playerId : 0;
   const worldSize = status.state === "open" || status.state === "dead" ? status.worldSize : 2600;
 
+  // capability gates the scheme: a stored "pads" preference that follows a
+  // browser profile onto a mouse-only desktop must not put thumb pads on screen
+  const padsOn = useControlScheme() === "pads" && useIsTouch();
+
+  // the three verbs, taught once per browser (game/tutorial.ts)
+  const tutorial = useTutorial();
+  useEffect(beginTutorial, []);
+  const teaching =
+    status.state === "open" && (tutorial.step !== null || tutorial.closing);
+
   // renderer lifecycle
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -118,20 +132,26 @@ function Arena() {
   const dash = useCallback(
     (sx: number, sy: number) => {
       client.sendDash(sx - innerWidth / 2, sy - innerHeight / 2);
+      noteDash();
     },
     [client],
   );
 
-  // input: pointer steers, click/tap lunges, keys toggle/vent
+  // input: pointer steers, click/tap lunges, keys toggle the lantern.
+  // Under the pad scheme the stick owns steering, so a touch on the water is
+  // only ever a candidate tap — but the tap still lunges, and still lunges
+  // *toward the touch point*, which is what keeps the aimed ambush strike (§9)
+  // instead of trading it for a button that can only fire along the heading.
   useEffect(() => {
     const onMove = (ev: PointerEvent) => {
       if (ev.pointerType !== "mouse" && !touchRef.current) return;
       pointerRef.current = { x: ev.clientX, y: ev.clientY };
-      client.sendDirection(ev.clientX - innerWidth / 2, ev.clientY - innerHeight / 2);
       const t0 = touchRef.current;
       if (t0 && ev.pointerType !== "mouse") {
         t0.moved = Math.max(t0.moved, Math.hypot(ev.clientX - t0.x, ev.clientY - t0.y));
+        if (padsOn) return;
       }
+      client.sendDirection(ev.clientX - innerWidth / 2, ev.clientY - innerHeight / 2);
     };
     const onDown = (ev: PointerEvent) => {
       if ((ev.target as HTMLElement).closest(".ui")) return;
@@ -146,7 +166,10 @@ function Arena() {
       const t0 = touchRef.current;
       touchRef.current = null;
       if (!t0 || ev.pointerType === "mouse") return;
-      client.sendDirection(0, 0); // every released touch returns to a stationary intent
+      // every released touch returns to a stationary intent — except under the
+      // pads, where the stick is holding a direction this touch never set and
+      // must not be allowed to cancel
+      if (!padsOn) client.sendDirection(0, 0);
       if (performance.now() - t0.t < 200 && t0.moved < 12) dash(ev.clientX, ev.clientY);
     };
     const stopInput = () => {
@@ -161,8 +184,7 @@ function Arena() {
       if (ev.code === "Space" || ev.code === "KeyL") {
         ev.preventDefault();
         client.sendToggle();
-      } else if (ev.code === "KeyV") {
-        client.sendVent();
+        noteToggle();
       }
     };
     window.addEventListener("pointermove", onMove);
@@ -181,18 +203,19 @@ function Arena() {
       window.removeEventListener("keydown", onKey);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [client, dash]);
+  }, [client, dash, padsOn]);
 
   return (
     <>
       <canvas ref={canvasRef} id="c" />
       <Hud selfId={selfId} />
       <Leaderboard />
-      <div className="hint">
-        <span className="hintKeys">cursor steers · click lunges · space shutters · V vents</span>
-        <span className="hintTouch">drag steers · tap lunges · lantern shutters · double-tap vents</span>
-      </div>
-      <LanternButton />
+      {/* the controls are taught on the start screen and, once per browser, by
+          the first-descent coach — the arena itself stays unlettered */}
+      {teaching && <Tutorial state={tutorial} selfId={selfId} />}
+      {padsOn
+        ? status.state === "open" && <TouchPads selfId={selfId} />
+        : <LanternButton />}
       {status.state === "dead" && <DeathOverlay by={status.by} peak={status.peakLight} />}
     </>
   );
@@ -227,19 +250,16 @@ function Leaderboard() {
 
 function LanternButton() {
   const client = useGameClient();
-  const lastTap = useRef(0);
   return (
     <button
       type="button"
       className="lanternBtn ui"
-      title="Shutter (Space / L) · double-tap to vent"
-      aria-label="Shutter lantern; activate twice quickly to vent light"
+      title="Shutter (Space / L)"
+      aria-label="Shutter lantern"
       onClick={(ev) => {
         ev.stopPropagation();
-        const t = performance.now();
-        if (t - lastTap.current < 300) client.sendVent();
-        else client.sendToggle();
-        lastTap.current = t;
+        client.sendToggle();
+        noteToggle();
       }}
     />
   );

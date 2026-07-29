@@ -1,0 +1,126 @@
+/* First-descent coach — same chromeless vocabulary as the modals, but it has to
+   stay legible over a moving arena, so it gets the faintest possible backing
+   rather than pure type. It is the only lettering the arena ever carries, it is
+   gone for good after one run, and it never eats a pointer event except on
+   "skip". */
+.coach {
+  position: fixed;
+  z-index: 6;
+  left: 50%;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(430px, 92vw);
+  padding: 14px 20px 16px;
+  text-align: center;
+  pointer-events: none;
+  border: 1px solid rgba(90, 255, 220, 0.14);
+  border-radius: 14px;
+  background: linear-gradient(rgba(2, 16, 22, 0.62), rgba(1, 8, 11, 0.78));
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 0 40px rgba(1, 8, 11, 0.6);
+  animation: coachIn 0.5s ease-out both;
+}
+@keyframes coachIn {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ---- progress: three marks, one per verb */
+.coachPips {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.coachPip {
+  width: 26px;
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(150, 185, 190, 0.22);
+}
+.coachPip.done { background: rgba(90, 255, 220, 0.7); }
+.coachPip.now {
+  background: rgba(90, 255, 220, 0.5);
+  animation: coachPulse 1.8s ease-in-out infinite;
+}
+@keyframes coachPulse {
+  50% { background: rgba(216, 255, 242, 0.9); box-shadow: 0 0 10px rgba(90, 255, 220, 0.6); }
+}
+
+.coachStep {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 0.5625rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(90, 255, 220, 0.45);
+}
+.coachTitle {
+  margin-top: 5px;
+  font-family: "Marcellus", "Avenir Next", Georgia, serif;
+  font-weight: 400;
+  font-size: 1.125rem;
+  letter-spacing: 0.06em;
+  color: #eafff8;
+  text-shadow: 0 0 24px rgba(90, 255, 220, 0.35);
+}
+.coachBody {
+  margin: 7px auto 0;
+  max-width: 36ch;
+  font-size: 0.8125rem;
+  font-weight: 300;
+  line-height: 1.6;
+  color: rgba(180, 208, 205, 0.8);
+}
+.coachKey {
+  margin-top: 10px;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 0.625rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(90, 255, 220, 0.6);
+}
+
+.coachSkip {
+  margin-top: 12px;
+  padding: 4px 8px;
+  pointer-events: auto;
+  font-family: inherit;
+  font-size: 0.625rem;
+  letter-spacing: 0.22em;
+  text-transform: lowercase;
+  color: rgba(150, 185, 190, 0.45);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.coachSkip:hover { color: rgba(180, 208, 205, 0.85); }
+.coachSkip:focus-visible { outline: 2px solid #eafff8; outline-offset: 3px; }
+
+/* one set of instructions per device, as everywhere else */
+.coachKey .coachTouch { display: none; }
+@media (pointer: coarse) {
+  .coachKey .coachKeys { display: none; }
+  .coachKey .coachTouch { display: inline; }
+  /* clear the shutter button, which owns the bottom-right corner on touch */
+  .coach { bottom: calc(max(14px, env(safe-area-inset-bottom)) + 96px); }
+}
+/* the pad scheme stacks a stick and an action row up the left edge, so the card
+   clears the whole column (stick top 130 + gap + a 62px button = 204) —
+   independent of pointer type, because the scheme is a choice, not a device */
+.coach.withPads { bottom: calc(max(22px, env(safe-area-inset-bottom)) + 196px); }
+
+/* landscape phones: the arena is the scarce thing, so tighten everything */
+@media (max-height: 520px) {
+  .coach { padding: 10px 16px 12px; }
+  .coachPips { margin-bottom: 8px; }
+  .coachTitle { font-size: 1rem; }
+  .coachBody { margin-top: 4px; font-size: 0.75rem; line-height: 1.45; }
+  .coachKey { margin-top: 6px; }
+  .coachSkip { margin-top: 6px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coach { animation: none; }
+  .coachPip.now { animation: none; background: rgba(216, 255, 242, 0.85); }
+}

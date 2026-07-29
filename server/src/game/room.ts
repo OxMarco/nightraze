@@ -47,7 +47,6 @@ const CFG = {
   spawnProtection: 2.0,
 
   mergeRadius: 12, settleRest: 25, settleFlicker: 3,
-  ventPct: 0.27, ventLockout: 2.0, ventCooldown: 0.8,
 
   shimmerBase: 65, shimmerPerSpeed: 20, shimmerMinSpeed: 20,
   shimmerGrid: 32,        // grid a shimmer ring's origin snaps to (§6 fidelity)
@@ -180,7 +179,7 @@ export interface Player {
   protectedUntil: number;          // sim-seconds
   dashT: number; dashCd: number; dashDX: number; dashDY: number;
   strikeT: number;                 // dash-asymmetry window: while > 0, this lantern doesn't spill when touched
-  ventCd: number; toggleCd: number;
+  toggleCd: number;
   speed: number;
   heading: number;
   peak: number;
@@ -252,6 +251,11 @@ export class Room {
     private readonly onCheat?: (player: Player, reason: string) => void,
     // how many bodies the arena is kept near while humans are present; 0 = no bots
     private readonly botPopTarget = 0,
+    // One privacy-minimised identity message per socket, handled by transport
+    // because the room has no persistence or request-location concerns.
+    private readonly onTelemetry?: (player: Player, visitorId: string, timezone: string) => void,
+    private readonly onRunEnd?: (player: Player) => void,
+    private readonly onRespawn?: (player: Player) => void,
   ) {
     for (let i = 0; i < CFG.fieldMoteTarget; i++) this.spawnMote();
     this.interval = setInterval(() => this.runTick(), 1000 / CFG.tickRate);
@@ -346,7 +350,7 @@ export class Room {
       protectedUntil: this.now + CFG.spawnProtection,
       dashT: 0, dashCd: 0, dashDX: 0, dashDY: 0,
       strikeT: 0,
-      ventCd: 0, toggleCd: 0,
+      toggleCd: 0,
       speed: 0, heading: 0,
       peak: CFG.starterEmber,
       dead: false,
@@ -393,6 +397,12 @@ export class Room {
     return n;
   }
 
+  activeHumanCount(): number {
+    let n = 0;
+    for (const p of this.players.values()) if (p.socket && !p.dead) n++;
+    return n;
+  }
+
   botCount(): number {
     return this.players.size - this.humanCount();
   }
@@ -405,9 +415,10 @@ export class Room {
     p.y = rand(200, CFG.arena - 200);
     p.lit = true;
     p.revealT = 0;
-    p.dashT = 0; p.dashCd = 0; p.strikeT = 0; p.ventCd = 0; p.toggleCd = 0;
+    p.dashT = 0; p.dashCd = 0; p.strikeT = 0; p.toggleCd = 0;
     p.dirX = 0; p.dirY = 0;
     p.protectedUntil = this.now + CFG.spawnProtection;
+    this.onRespawn?.(p);
     this.send(p, { msg: { case: "welcome", value: { playerId: p.id, worldSize: CFG.arena } } });
   }
 
@@ -457,7 +468,7 @@ export class Room {
       return;
     }
 
-    // Rate-limit only the high-frequency movement stream; actions (dash/vent/
+    // Rate-limit only the high-frequency movement stream; actions (dash and
     // toggle) are also gated by their own server-side cooldowns, and
     // malformed frames were rejected above — none of them should be able to
     // starve a legitimate input of its budget.
@@ -485,12 +496,12 @@ export class Room {
         this.applyDash(p, tx, ty);
         break;
       }
-      case "vent": {
-        this.applyVent(p);
-        break;
-      }
       case "respawn": {
         if (p.dead) this.respawn(p);
+        break;
+      }
+      case "telemetry": {
+        this.onTelemetry?.(p, msg.msg.value.visitorId, msg.msg.value.timezone);
         break;
       }
       default:
@@ -539,33 +550,6 @@ export class Room {
     p.protectedUntil = this.now;                     // dash breaks spawn protection
   }
 
-  private applyVent(p: Player): void {
-    if (p.dead || p.ventCd > 0) return;
-    // cannot vent below the starter ember (§8)
-    const amount = Math.min(CFG.ventPct * p.light, p.light - CFG.starterEmber);
-    if (amount <= 1) return;
-    p.light -= amount;
-    p.ventCd = CFG.ventCooldown;
-    // vent out the back if we have a heading; random when standing still
-    // (guarding on the vector itself — atan2 returns a falsy 0 for straight
-    // -x movement, which would wrongly scatter a moving vent at random)
-    const back = (p.dirX !== 0 || p.dirY !== 0)
-      ? Math.atan2(-p.dirY, -p.dirX)
-      : rand(0, TAU);
-    let rem = amount;
-    while (rem > 0.05) {
-      const v = Math.min(rem, rand(1.5, 3));
-      rem -= v;
-      const a = back + rand(-0.9, 0.9), sp = rand(60, 140);
-      this.spawnLoose(
-        p.x + Math.cos(a) * (bodyR(p.light) + 6),
-        p.y + Math.sin(a) * (bodyR(p.light) + 6),
-        v, Math.cos(a) * sp, Math.sin(a) * sp,
-        p.id, this.now + CFG.ventLockout);
-    }
-    this.emitEffect({ kind: EffectKind.VENT, x: p.x, y: p.y, m: bodyR(p.light) + 50 });
-  }
-
   // ---------------------------------------------------------------- combat (§7)
   private pairKey(a: Player, b: Player): string {
     return a.id < b.id ? a.id + ":" + b.id : b.id + ":" + a.id;
@@ -597,6 +581,7 @@ export class Room {
       this.scatterCrescent(victim, rand(0, TAU), victim.light);
       victim.light = 0;
       victim.dead = true;
+      this.onRunEnd?.(victim);
       this.send(victim, { msg: { case: "dead", value: { by: toucher.name, peakLight: victim.peak } } });
       return;
     }
@@ -815,7 +800,6 @@ export class Room {
       p.revealT = Math.max(0, p.revealT - dt);
       p.dashCd = Math.max(0, p.dashCd - dt);
       p.strikeT = Math.max(0, p.strikeT - dt);
-      p.ventCd = Math.max(0, p.ventCd - dt);
       p.toggleCd = Math.max(0, p.toggleCd - dt);
 
       let vx = p.dirX * p.throttle * speedOf(p.light, !p.lit);
@@ -857,7 +841,7 @@ export class Room {
       }
     }
 
-    // collect loose motes (vent self-pickup lockout honored)
+    // collect loose motes (spill self-pickup lockout honored)
     for (const p of alive) {
       const eatR = bodyR(p.light) + 3;
       const pullR = eatR + 26;
@@ -1074,8 +1058,7 @@ export class Room {
         const reach =
           e.kind === EffectKind.BURN || e.kind === EffectKind.SNUFF
             ? CFG.flareVisibility                          // flares pierce the darkness (§5)
-            : e.kind === EffectKind.DOUSE ? 500
-            : e.kind === EffectKind.VENT ? 400 : 300;
+            : e.kind === EffectKind.DOUSE ? 500 : 300;
         if (d <= reach) effects.push(e);
       }
 

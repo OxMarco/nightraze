@@ -14,19 +14,23 @@
 
 import { createRoot } from "react-dom/client";
 import App from "./App.js";
+import { CrashBoundary } from "./CrashBoundary.js";
 import { crazyGamesPlatform } from "./platform/crazygames.js";
 import { platform, setPlatform } from "./platform/current.js";
+import { installCrashReporting } from "./telemetry.js";
 import "./index.css";
 
 setPlatform(crazyGamesPlatform);
+document.body.classList.add("game-shell");
 
 // ready() before loadingStart(): the SDK's own handshake is not our loading
 // time, and its methods do not answer until it has finished one.
 void platform()
   .ready()
   .then(() => {
+    installCrashReporting();
     platform().loadingStart();
-    createRoot(document.getElementById("root")!).render(<App />);
+    createRoot(document.getElementById("root")!).render(<CrashBoundary><App /></CrashBoundary>);
     // The start screen is up on the next paint; that is the moment the player
     // can act, which is what the host is timing.
     requestAnimationFrame(() => platform().loadingStop());

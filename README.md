@@ -3,7 +3,7 @@
 **Genre:** Free-for-all arena .io game (stealth / light-theft)
 **Platform:** Browser-first (CrazyGames, Poki and similar portals), mobile and desktop, one-finger playable
 **Session length:** 3-8 minutes
-**Status:** v5. Contact-spill combat replaces the v3 strike model (history in Appendix A). Dark-state readability, mote lifecycle, and the gutter state are locked. Launch arena is featureless — occluders (monoliths) moved to the To-validate list (§14). Vent-light provisional; dash asymmetry is live (§7).
+**Status:** v6. Vent-light cut — the arena runs on three verbs: eat, lunge, shutter (§8; design retained in §14). Contact-spill combat replaces the v3 strike model (history in Appendix A). Dark-state readability, mote lifecycle, and the gutter state are locked. Launch arena is featureless — occluders (monoliths) moved to the To-validate list (§14). Dash asymmetry is live (§7).
 
 Built ahead of the original plan: the arena runs on an authoritative server with real multiplayer, bots filling the population when humans are thin (§13). Perception is graded on the wire, not merely gated — the anti-cheat spine of a hidden-information game (§6). Leader-side answers shipping ahead of the §15 Q10 verdict: the crown (§11) and peak-as-run-score (§4). A leader-only offensive verb is held until that question has evidence.
 
@@ -50,7 +50,7 @@ The arena is deliberately featureless at launch: only players, motes, and the bo
 
 **Field motes** (reference: 260 concurrent, worth 1 light each) are small cyan twinkles scattered across the arena. Eating one immediately respawns a replacement elsewhere, so the field never depletes and standing still never generates progress — the anti-camping pressure is economic, not rule-based.
 
-**Loose motes** are gold, carry variable value, and exist only as the product of combat and venting. They scatter with physical velocity and decay to rest, forming contested piles. They do not respawn from nothing; they are wealth changing hands. And they have a lifecycle:
+**Loose motes** are gold, carry variable value, and exist only as the product of combat. They scatter with physical velocity and decay to rest, forming contested piles. They do not respawn from nothing; they are wealth changing hands. And they have a lifecycle:
 
 - **Merging.** Loose motes at rest within ~12 units combine into a single larger mote — for readability and for phone GPUs, since crescents near crowds would otherwise spray dozens of entities.
 - **Settling.** A loose mote at rest for ~25 seconds flickers for 3 seconds, then settles: it becomes a single 1-value field mote in place, and any excess value returns to the global spawn budget to re-emerge elsewhere as cyan twinkles. Abandoned wealth dissolves back into the arena's ambient glitter — nothing leaks out of the economy, and nothing litters it.
@@ -142,7 +142,9 @@ This produces three stealth states with zero UI:
 | Moving carefully | Faint, intermittent distortion |
 | Moving quickly | Trackable with attention |
 
-Stationary invisibility permits ambush camping. This is accepted because standing still earns nothing (§3) and because vent-light (§8) attaches a resource cost to baiting.
+Stationary invisibility permits ambush camping. This is accepted because standing still earns nothing (§3): a camper's light is frozen while everyone else's compounds, so patience is paid for in rank.
+
+*Watch item (new in v6):* that economic pressure now carries this argument **alone**. Vent-light used to carry the other half — a baiter had to spend real light to lay the pile that made camping worth doing — and it is cut (§8). If dark camping starts out-earning active play, this is the first place to look, and re-instating vent is the recorded answer (§14).
 
 ### Perception rules (applies symmetrically to players and bots)
 
@@ -212,13 +214,15 @@ Under mutual spill alone, fights read as too slow and too fiddly against agar's 
 
 ---
 
-## 8. Vent-light (provisional)
+## 8. Vent-light — cut in v6
 
-The heir to agar's spit-mass, thematically inverted: players may deliberately shed a chunk of held light (reference: 25–30% per vent), dropped as a loose-mote pile.
+Shipped as provisional, removed to hold the arena at three verbs: **eat, lunge, shutter**. The full design, its guardrails, and the evidence that brings it back are retained in §14.
 
-What one verb generates: a **panic escape** — dumping light can carry a hunted mid-size player back below the irreducible-glow threshold, buying true invisibility at the price of score and health; a **bribe** — "take the pile, stop chasing me"; and a **bait** — sit dark and motionless beside your own vented pile and ambush the collector with a dash, which is the mechanic that puts a price tag on ambush camping.
+It was written with its own kill switch — *"whether a second verb overloads the one-finger scheme — ship v1 without it if mobile testing says so; nothing else in the design depends on it"* — and what tripped it was not thumb ergonomics but comprehension. Players could not name what light *was*, which makes a verb that spends it unreachable: you cannot value a trade you haven't priced. Vent was also the only binding in the game that had to be *explained* rather than discovered — steering, contact, and the shutter all teach themselves by being done, while `V` and the double-tap taught nothing until someone told you they existed.
 
-Guardrails: cannot vent below the starter ember (12 — which also means venting can never carry you into the gutter voluntarily); a ~2s self-pickup lockout prevents free glow-toggling while still allowing reclaim-after-bait. Vented piles obey the standard loose-mote lifecycle (§3) — a bait left too long settles back into the field. Input: a secondary action (double-tap of the lantern button, or a context button appearing only above the glow threshold). **Open question:** whether a second verb overloads the one-finger scheme — ship v1 without it if mobile testing says so; nothing else in the design depends on it.
+Two consequences the rest of this document now carries, both recorded where they bite: baiting no longer costs the baiter anything, so the anti-camping argument rests on the economy alone (§6), and a leader has no way to shed light voluntarily — the only route down is being drained (§15 Q10).
+
+*Section number retained: §-references from the rest of this document and from the code still land here.*
 
 ---
 
@@ -230,11 +234,35 @@ The allocation principle: the *required* game is played entirely with the steeri
 
 **Mobile — one finger.** Drag anywhere to steer — and steering into contact is combat, so the zero-knowledge player has the full game on the drag alone. Quick tap (< 200ms, < 12px movement) = flare lunge **toward the tap point** — the touch scheme gets aimed dashes for free. Tap the corner lantern button = toggle; the ~200ms steering interruption is acceptable because toggling is rare, and reads thematically as pausing to shutter the lantern.
 
-**Ambush strike.** Tapping while dark relights and lunges in a single gesture. The full stealth loop — go dark, creep in, tap the victim, lantern bursts open mid-strike — is one finger, three touches.
+**Mobile — two thumbs (opt-in, v6).** Offered on the start screen and never imposed; the one-finger scheme above stays the default, so the platform claim in the header stays true. One corner, not two: a stick in the bottom-left steers, with the two action buttons in a row directly above it, shutter then lunge. They share a diameter — a row of unequal circles reads as a mistake before it reads as a hierarchy — so the lunge is marked as the primary by weight instead: brighter rim, hotter glow, and the near-white of held light against the shutter's teal. The whole scheme is a single narrow column up the left edge, kept small on purpose; these are instruments laid over the arena, and the arena is the thing the player is straining to see. This is the watch item below, shipped: a stick moves the steering thumb off the water.
+
+*Capability gates the scheme, not the stored preference.* The choice follows a browser profile across machines, so a mouse-only desktop can inherit "pads" from a phone; it must never be handed thumb controls it cannot use and was never offered. The preference only picks between schemes a device could actually run.
+
+Both buttons carry a Feather glyph (MIT), inlined rather than pulled in as a dependency and drawn in `currentColor`, so the control owns hue and opacity together and every state is one change rather than a second set of art. `chevrons-up` for the lunge — a burst forward rather than a stance. For the shutter, `sun` while the lantern burns and `moon` once it is closed: Feather has no lantern or bulb in the set, and its on/off pair for light reads correctly on a control that opens and closes one. The swap makes the button a readout of the stance it is about to change.
+
+Two buttons, not one button with a press-pattern, and the reason is the same one that appears twice in the rejected list below. The verbs have opposite timing profiles — the lunge is the fastest verb in the game and *is* the ambush strike, while the shutter is rare and already costs an iris — and any short/long or multi-press scheme makes a touch-down ambiguous until its timer expires. Something has to wait, and it must never be the lunge. Separating them in space costs nothing and, unlike a hidden gesture, neither binding has to be *explained* — the failure that cost vent-light its place (§8).
+
+**Tap-to-lunge survives on the water** under the pads, still aimed at the tap point. The button can only fire along the current heading, so making it the only lunge would quietly trade away the aimed strike; keeping the field tap costs nothing, because once steering moves to the stick the water has no other job — and accidental lunges *fall*, since the field is no longer being dragged. The stick's full deflection is the server's throttle ceiling and its dead zone is real: standing still is a stealth state (§6), and a stick that crept would delete it.
+
+**Ambush strike.** Tapping while dark relights and lunges in a single gesture. The full stealth loop — go dark, creep in, tap the victim, lantern bursts open mid-strike — is one finger, three touches. It survives both schemes: under the pads the tap is still the strike.
 
 Rejected alternatives, for the record: hold-to-douse (rejected by design preference; also imposed release-latency in the unified-button variant), double-tap-to-lunge (adds latency to the fastest verb), flick-to-lunge (undiscoverable, misreads fast drag releases), auto-attack-while-lit-at-range (deletes ambush timing), **continuous uncapped contact drain** (rejected: contact duration is controlled by the *faster* party, so drain empowers fast-small over slow-big — the exact inversion of the intended curve — and makes losses illegible; see Appendix A). Known cost of tap-vs-drag: occasional accidental lunges; softened because misfires are at least aimed, and the cost is dominated by the reveal rather than the light spent.
 
-*Watch item:* drag-anywhere steering puts the player's thumb over the darkness they are squinting into. Offset-touch steering or an optional virtual stick are the fallbacks if testing confirms it.
+*Watch item:* drag-anywhere steering puts the player's thumb over the darkness they are squinting into. Offset-touch steering or an optional virtual stick are the fallbacks if testing confirms it. **The stick shipped in v6** as the opt-in scheme above; it is an option rather than a replacement precisely so this stays a live question rather than an answered one. What testing still has to say is which scheme players *keep* — if the pads win by a wide margin, the default moves and the one-finger claim goes with it.
+
+### First descent — the three verbs, taught once
+
+The control scheme is discoverable; the *game* was not. Playtesters could steer immediately and still never find out that light is a resource, that contact is the attack, or that the lantern closes — so the arena read as a screensaver with a score. The onboarding is therefore three beats, one per verb, in the order they compound: **eat to grow → lunge to take → go dark**.
+
+Rules it holds to, because a tutorial that breaks them costs more than the confusion it fixes:
+
+- **It teaches by watching, never by gating.** Nothing pauses, nothing is blocked, no server round-trip is involved, and the card is pointer-transparent — a lunge aimed through it lands. The arena is live the whole time, including the part where something eats you mid-lesson.
+- **A step retires when the player does the thing** (past the starter ember, a lunge sent, a shutter worked), so a prompt is on screen exactly as long as it is still unanswered. Sequential: an out-of-order action does not retire text that has not been read.
+- **Once per browser, and it means it.** Completing or skipping it is remembered. A personal best only grandfathers a player out well clear of the starter ember (40) — a first run that ends in a quick snuff records a best too, and that player is precisely the one whose next run should explain itself.
+
+The arena carries no other lettering. A standing control hint used to sit along the bottom edge of every run; it was cut in v6 because it charged every player, forever, for a lesson only the first run needs — and because a permanent instruction strip is an admission that the game cannot teach itself. Controls are stated once on the start screen, taught once by the coach, and after that the arena is only the arena.
+
+Implementation: `client/src/game/tutorial.ts` (state) + `client/src/ui/tutorial.tsx`.
 
 ---
 
@@ -259,7 +287,7 @@ Tuning intuitions: G too steep and holding first place is pure misery, too shall
 
 ## 11. Emergent roles
 
-No classes exist, but the systems produce them. The **Farmer** stays lit, mid-size, and fat on motes, banking on vision to spot threats early — and steers wide of contact, since every brush is a donation downward. The **Ghost** stays deliberately below the glow threshold, trading all progress for perfect stealth and dash-chips on the wounded and the guttering. The **Baiter** vents a pile and waits beside it, dark and still. The **Vulture** follows fights at the edge of other people's flare-light and eats the intermingled crescents — and circles guttering lanterns waiting for someone else's burn. The **Leader** cannot hide, cannot slow down, burns everything it touches and bleeds richly for every touch taken — a bonfire playing the whole arena as a chase scene, which is exactly the pressure that keeps first place earned minute by minute.
+No classes exist, but the systems produce them. The **Farmer** stays lit, mid-size, and fat on motes, banking on vision to spot threats early — and steers wide of contact, since every brush is a donation downward. The **Ghost** stays deliberately below the glow threshold, trading all progress for perfect stealth and dash-chips on the wounded and the guttering. The **Vulture** follows fights at the edge of other people's flare-light and eats the intermingled crescents — and circles guttering lanterns waiting for someone else's burn. The **Leader** cannot hide, cannot slow down, burns everything it touches and bleeds richly for every touch taken — a bonfire playing the whole arena as a chase scene, which is exactly the pressure that keeps first place earned minute by minute.
 
 The bot ecology inverts agar's, visibly. Agar bots chase smaller and flee bigger; nightraze bots avoid touching smaller players (donation) and seek grazing contact with bigger ones (profit). A fresh spawn watching the arena sees minnows harassing whales — the inverted power curve playing out on screen before the player has read a single word.
 
@@ -277,9 +305,9 @@ The point is that in *this* game prestige is self-balancing. A crown is only pre
 
 **Kept from the chassis:** free-for-all arena, scattered pickups, growth-by-collection, size-speed inverse, leaderboard, death releasing resources, instant respawn, one-pointer movement, **and combat resolved by collision**. This familiarity is an asset: portals give a game ten seconds to teach itself, and "you already know this, except—" is the proven io formula. An agar player who rams someone gets exactly the spark-and-scatter lesson their instincts asked for.
 
-**Removed:** split (its skill expression migrates to dash timing/aim and douse jukes — execution depth traded for information depth, the correct trade for mobile).
+**Removed:** split (its skill expression migrates to dash timing/aim and douse jukes — execution depth traded for information depth, the correct trade for mobile), and spit-mass — vent-light was its thematically inverted heir, growth-tool to escape-tool, and was itself cut in v6 (§8). Neither of agar's two extra verbs survives: the depth here is bought with information, not with inputs.
 
-**Replaced:** contact consumption → **contact spill**. The collision verb survives; its consequence changes from existence to progress. Losing a fight in agar deletes you; losing a fight in nightraze spills you onto the table, where you can fight for your own light back. Spit-mass → vent-light, thematically inverted from growth-tool to escape-tool.
+**Replaced:** contact consumption → **contact spill**. The collision verb survives; its consequence changes from existence to progress. Losing a fight in agar deletes you; losing a fight in nightraze spills you onto the table, where you can fight for your own light back.
 
 **Added — the visibility economy:** unified light resource, lantern stances, irreducible glow scaled to wealth, three-state movement stealth, reveal-before-damage combat, symmetric spill, and the gutter execute. Interlocking mechanics, not a shader. The test that matters: an agar player's decision loop is "chase smaller, flee bigger"; a nightraze player's is "am I willing to be seen right now?" — and the ecology answers differently too, because under symmetric spill the minnows hunt the whales. Different question, different game.
 
@@ -319,6 +347,22 @@ Dark crystal formations scattered on the arena (reference: 10–14, radii 70–1
 
 Also held back: smoke curtains, eclipse zones, and other exotic occluders (content updates, contingent on monoliths shipping at all).
 
+### Vent-light — cut in v6, design retained
+
+The heir to agar's spit-mass, thematically inverted: players may deliberately shed a chunk of held light (reference: 25–30% per vent), dropped as a loose-mote pile. Shipped provisionally in v5, removed in v6 to hold the arena at three verbs (§8).
+
+What the one verb generated: a **panic escape** — dumping light can carry a hunted mid-size player back below the irreducible-glow threshold, buying true invisibility at the price of score and health; a **bribe** — "take the pile, stop chasing me"; and a **bait** — sit dark and motionless beside your own vented pile and ambush the collector with a dash, which is the mechanic that put a price tag on ambush camping. It also produced a role, the **Baiter** (§11), which goes with it.
+
+Guardrails, as built and now removed: cannot vent below the starter ember (12 — which also means venting can never carry you into the gutter voluntarily); a ~2s self-pickup lockout prevents free glow-toggling while still allowing reclaim-after-bait. Vented piles obeyed the standard loose-mote lifecycle (§3) — a bait left too long settles back into the field. Input was a secondary action: `V` on desktop, double-tap of the lantern button on touch.
+
+**Validation triggers — bring it back if any of these show up:**
+
+- **Camping out-earns playing.** Dark, stationary ambush is now answered by the economy alone (§6). If patient camping beats active play on light-per-minute, the bait cost is the designed fix.
+- **Leaders read as trapped rather than hunted** (§15 Q10). Vent was the only voluntary way down from the top; without it, a leader's sole exit is being drained by someone else. Watch this before building a leader-only offensive verb, which is the expensive answer to the same complaint.
+- **Mid-size players have no counterplay to a committed hunter.** The panic escape existed for exactly that squeeze.
+
+If it returns, it returns *after* onboarding proves players can price their own light (§9, first descent) — the comprehension failure that killed it is a prerequisite problem, not an argument against the verb. Re-instating it is cheap and mechanical: the proto field numbers it used are reserved, not recycled (`ClientMessage` 4, `EffectKind` 5), so the wire has a vent-shaped hole kept open on purpose.
+
 ---
 
 ## 15. Open questions / playtest checklist
@@ -326,7 +370,7 @@ Also held back: smoke curtains, eclipse zones, and other exotic occluders (conte
 1. Does tap-vs-drag misfire enough on real thumbs to justify a fallback (double-tap mode toggle in settings)?
 2. Irreducible glow at G=0 vs G=14: where between "leader hides freely" and "leader is food" does first place stay *desirable*? Runnable as a live sweep inside one sitting with the same testers (§10) — move the dial between rounds rather than between builds, and read it with the Q10 signals below.
 3. **Does the douse juke survive a featureless arena** — do afterimage timing and shimmer thresholds alone produce a genuine guessing game, or does pursuit collapse into a radius sweep? This is the trigger question for §14 occluders.
-4. Vent-light: does the bait loop justify a second verb on mobile?
+4. *Retired in v6 (number kept so Q5–Q11 references stay put).* ~~Vent-light: does the bait loop justify a second verb on mobile?~~ — cut before it could be tested, on comprehension rather than ergonomics (§8). The question that replaces it lives in §14: does anything *break* without it?
 5. Is dark vision at 60 tactical or claustrophobic on a 6-inch screen, with the contracting iris in place?
 6. Time-to-first-scare: does a fresh spawn meet meaningful danger inside 30 seconds at 14 bots / 2600²?
 7. Boundary corners: does corner-pinning against the gutter state get ugly enough to need rounded corners or repulsion?
@@ -334,11 +378,11 @@ Also held back: smoke curtains, eclipse zones, and other exotic occluders (conte
 9. Leader findability: glow caps at 520 on a 2600-unit arena — a fifth of the map — so hunters cannot actually locate first place. Does the hunt loop need a faint directional horizon-glow toward the leader?
 10. **Leader agency:** is the bonfire role (burns all, profits from touching nobody) desirable prey or declawed misery? Dash asymmetry went live for this, and the crown (§11) is the cheap half of the answer; a leader-only offensive verb is the expensive half, and it stays held until this question has evidence.
 
-    *How to read the answer.* The tempting test — "do top players say they want to hold first place, or do they just want to dump their light and hide?" — fails, because dumping and hiding is a **designed verb** (§8: escape, bribe, bait) and a named role (§11, the Ghost). A tester who dumps may be reporting that the game works. The real distinction is agency versus relief, and self-report cannot separate them, because the words are identical. Watch behaviour instead:
+    *How to read the answer.* The tempting test — "do top players say they want to hold first place, or do they just want to go dark and hide?" — fails, because hiding is a **designed stance** (§5) and a named role (§11, the Ghost). A tester who shutters may be reporting that the game works. The real distinction is agency versus relief, and self-report cannot separate them, because the words are identical. Watch behaviour instead:
 
     - **Re-ascent.** After dying at the top, do they climb again, or settle into a safe mid-band? Repeat ascent is the fantasy working.
     - **Time spent lit above the crown threshold.** If leaders spend their bright minutes dark, the role is a sentence they are serving.
-    - **Vent timing.** At the moment of a read — hunter closing, bait being set — or pre-emptively and constantly? The first is a play; the second is an evacuation.
+    - **Shutter timing.** At the moment of a read — a hunter closing, a juke being set up — or pre-emptively and constantly? The first is a play; the second is an evacuation. Note what v6 changed here: with vent cut (§8), shuttering is the *only* voluntary move a leader has left, and it sheds no light at all — a leader who wants out has to be drained out. If the bonfire role reads as misery, that missing release valve is a prime suspect.
     - **Peak light per run trending up across a session.**
 
     Run this against a G sweep (lever 1 is live-tunable — §10), not against new mechanics. It would be an expensive mistake to build subsystems to fix a leader experience that turns out to be one number over-tuned — or, per Q9, one where nobody could find the leader to begin with.

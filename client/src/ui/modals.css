@@ -236,6 +236,39 @@
   color: rgba(90, 255, 220, 0.55);
 }
 
+/* ---- touch scheme, offered and never imposed (§9) */
+.schemePick {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+}
+.schemeLbl {
+  color: rgba(150, 185, 190, 0.32);
+  text-transform: uppercase;
+}
+.schemeOpt {
+  padding: 3px 2px;
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  color: rgba(150, 185, 190, 0.4);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  cursor: pointer;
+}
+.schemeOpt.on {
+  color: var(--glow);
+  border-bottom-color: rgba(90, 255, 220, 0.5);
+}
+.schemeOpt:focus-visible { outline: 2px solid var(--glow-hot); outline-offset: 3px; }
+
 /* ---- short viewports (landscape phones): tighten the vertical rhythm */
 @media (max-height: 520px) {
   .modalTitle { font-size: 1.75rem; }

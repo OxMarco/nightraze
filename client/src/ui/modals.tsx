@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useConnectionStatus, useGameActions, useGameClient } from "../game/hooks.js";
 import { readBest, recordRun } from "../game/best.js";
+import { setScheme, useControlScheme, useIsTouch } from "../game/controls.js";
 import { proposeName, readName } from "../game/prefs.js";
 import { platform } from "../platform/current.js";
 import "./modals.css";
@@ -34,6 +35,10 @@ export function StartScreen() {
   const { connect } = useGameActions();
   const [name, setName] = useState(readName);
   const [best] = useState(readBest);
+  const scheme = useControlScheme();
+  // the switch is only meaningful on a device that can touch; asking a mouse
+  // which thumb layout it prefers is noise
+  const touch = useIsTouch();
   const waiting = status.state === "connecting" || status.state === "reconnecting";
 
   const go = () => {
@@ -87,10 +92,33 @@ export function StartScreen() {
         )}
         <div className="modalControls">
           <span className="keys">
-            cursor steers · <kbd>click</kbd> lunges · <kbd>space</kbd> shutters · <kbd>V</kbd> vents
+            cursor steers · <kbd>click</kbd> lunges · <kbd>space</kbd> shutters
           </span>
-          <span className="touch">drag steers · tap lunges · lantern button shutters, double-tap vents</span>
+          <span className="touch">
+            {scheme === "pads"
+              ? "stick steers · lunge and shutter buttons · tap the water to aim a lunge"
+              : "drag steers · tap lunges · lantern button shutters"}
+          </span>
         </div>
+        {touch && (
+          <div className="schemePick">
+            <span className="schemeLbl">touch controls</span>
+            <button
+              type="button"
+              className={"schemeOpt" + (scheme === "one-finger" ? " on" : "")}
+              onClick={() => setScheme("one-finger")}
+            >
+              one finger
+            </button>
+            <button
+              type="button"
+              className={"schemeOpt" + (scheme === "pads" ? " on" : "")}
+              onClick={() => setScheme("pads")}
+            >
+              stick + buttons
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

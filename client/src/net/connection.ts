@@ -5,6 +5,7 @@ import {
 } from "../gen/nightraze/v1/game_pb.js";
 import { SnapshotBuffer } from "./interpolation.js";
 import { applyTuning } from "../render/core.js";
+import { clientTimezone, visitorId } from "../telemetry.js";
 
 export type ConnectionStatus =
   | { state: "idle" }
@@ -92,6 +93,16 @@ export class GameClient {
     ws.binaryType = "arraybuffer";
     this.ws = ws;
     let sawError = false;
+
+    ws.onopen = () => {
+      if (this.ws !== ws) return;
+      ws.send(toBinary(ClientMessageSchema, create(ClientMessageSchema, {
+        msg: {
+          case: "telemetry",
+          value: { visitorId: visitorId(), timezone: clientTimezone() },
+        },
+      })));
+    };
 
     ws.onmessage = (ev: MessageEvent) => {
       if (!(ev.data instanceof ArrayBuffer)) return;
@@ -245,11 +256,6 @@ export class GameClient {
   /** Flare lunge toward a direction (screen-relative vector is fine). */
   sendDash(tx: number, ty: number): void {
     this.sendAction({ msg: { case: "dash", value: { tx, ty } } });
-  }
-
-  /** Vent ~27% of held light as a loose pile. */
-  sendVent(): void {
-    this.sendAction({ msg: { case: "vent", value: {} } });
   }
 
   /** One more run (only honored by the server while dead). */

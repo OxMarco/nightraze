@@ -4,16 +4,17 @@ package nightraze.v1;
 
 // ---- Client -> Server ----
 // The client can only ever express intent: a direction, a stance toggle, an
-// aimed lunge, a vent, a respawn. Positions, speeds, and outcomes are
-// server-owned.
+// aimed lunge, a respawn. Positions, speeds, and outcomes are server-owned.
 
 message ClientMessage {
+  reserved 4;   // was VentRequest vent — vent-light cut in v6 (§14)
+
   oneof msg {
     MovementInput input = 1;
     ToggleLantern toggle = 2;
     DashRequest dash = 3;
-    VentRequest vent = 4;
     RespawnRequest respawn = 5;
+    TelemetryHello telemetry = 6;
   }
 }
 
@@ -32,9 +33,14 @@ message DashRequest {
   float ty = 2;
 }
 
-message VentRequest {}
-
 message RespawnRequest {}
+
+// Sent once after the socket opens. The random visitor id supports DAU without
+// accounts or personal data; timezone is retained only as a coarse location.
+message TelemetryHello {
+  string visitor_id = 1;
+  string timezone = 2;
+}
 
 // ---- Server -> Client ----
 
@@ -86,7 +92,7 @@ message Snapshot {
   double server_time_ms = 1;
   repeated PlayerState players = 2;
   repeated MoteState motes = 3;       // field motes (plankton, worth 1)
-  repeated LooseMoteState loose = 4;  // spilled/vented plasma, variable value
+  repeated LooseMoteState loose = 4;  // spilled plasma, variable value
   repeated Effect effects = 5;        // transient events since last snapshot
 }
 
@@ -119,12 +125,13 @@ message LooseMoteState {
 }
 
 enum EffectKind {
+  reserved 5;   // was VENT — vent-light cut in v6 (§14)
+
   EFFECT_KIND_UNSPECIFIED = 0;
   BURN = 1;   // contact spark + reveal flash at the touch point
   SNUFF = 2;  // membrane rupture burst
   DOUSE = 3;  // lantern-closing afterimage stain
   BUMP = 4;   // dark-on-dark ripple
-  VENT = 5;   // vent whoosh ring
   SHIMMER = 6; // a dark mover's wake ring (§6)
 }
 
