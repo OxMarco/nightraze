@@ -1,7 +1,29 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body, #root { width: 100%; height: 100%; background: #010b10; }
-body.game-shell, body.game-shell #root { overflow: hidden; touch-action: none; overscroll-behavior: none; }
-body.game-shell { font-family: "Avenir Next", "Segoe UI", system-ui, sans-serif; color: #a8c8c0; user-select: none; -webkit-user-select: none; }
+/* The arena is a fixed surface, so both page-level scrolling boxes must be
+   locked. Applying the class directly to <html> avoids relying on :has(), and
+   removing the body's user-agent margin prevents it from creating a small
+   root-level overflow range. The metrics dashboard does not get this class and
+   remains a normal scrolling document. */
+html.game-shell {
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+html.game-shell body,
+html.game-shell #root {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+body.game-shell {
+  margin: 0;
+  touch-action: none;
+  font-family: "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  color: #a8c8c0;
+  user-select: none;
+  -webkit-user-select: none;
+}
 /* Reset, so it must lose every argument it has with a real rule. Written as
    `body.game-shell *` it scored (0,1,1) — higher than any single-class selector
    in the app — so it quietly won against .modalCore, .rules, .nameInput and the
@@ -12,7 +34,7 @@ body.game-shell { font-family: "Avenir Next", "Segoe UI", system-ui, sans-serif;
 #c { position: fixed; inset: 0; display: block; }
 
 /* sonar-console HUD */
-.hudState { position: fixed; z-index: 5; top: max(14px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left)); pointer-events: none;
+.hudState { position: fixed; z-index: 5; top: calc(env(safe-area-inset-top) + 14px); left: calc(env(safe-area-inset-left) + 16px); pointer-events: none;
   font-size: .8125rem; letter-spacing: .14em; text-transform: uppercase; color: rgba(90,255,220,.75);
   text-shadow: 0 0 14px rgba(90,255,220,.3); }
 .hudState b { font-size: 1.0625rem; letter-spacing: .06em; }
@@ -20,11 +42,11 @@ body.game-shell { font-family: "Avenir Next", "Segoe UI", system-ui, sans-serif;
 .hudState.gutterState { color: rgba(255,61,104,.9); animation: strobe .35s steps(2) infinite; }
 @keyframes strobe { 50% { opacity: .3; } }
 
-.leaderboard { position: fixed; z-index: 5; top: max(14px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right)); pointer-events: none;
+.leaderboard { position: fixed; z-index: 5; top: calc(env(safe-area-inset-top) + 14px); right: calc(env(safe-area-inset-right) + 16px); pointer-events: none;
   text-align: right; font-size: .78rem; line-height: 1.6; color: rgba(150,180,195,.75); }
 .leaderboard h4 { font-size: .6875rem; letter-spacing: .2em; text-transform: uppercase; color: rgba(90,255,220,.45); margin-bottom: 3px; }
 
-.lanternBtn { position: fixed; z-index: 6; right: max(18px, env(safe-area-inset-right)); bottom: max(22px, env(safe-area-inset-bottom));
+.lanternBtn { position: fixed; z-index: 6; right: calc(env(safe-area-inset-right) + 18px); bottom: calc(env(safe-area-inset-bottom) + 22px);
   width: 74px; height: 74px; padding: 0; border-radius: 50%;
   border: 2px solid rgba(90,255,220,.5); background: radial-gradient(circle at 50% 45%, rgba(90,255,220,.22), rgba(1,15,14,.6) 70%);
   display: flex; align-items: center; justify-content: center; cursor: pointer;

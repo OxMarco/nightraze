@@ -21,6 +21,7 @@ import { installCrashReporting } from "./telemetry.js";
 import "./index.css";
 
 setPlatform(crazyGamesPlatform);
+document.documentElement.classList.add("game-shell");
 document.body.classList.add("game-shell");
 
 // ready() before loadingStart(): the SDK's own handshake is not our loading

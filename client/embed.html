@@ -20,12 +20,13 @@
          below imports the platform adapter that expects window.CrazyGames. -->
     <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Marcellus&family=IBM+Plex+Mono:wght@400;500&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Fonts are self-hosted (client/public/fonts): no third-party request to
+         flag in portal QA, no dependency on Google being reachable from
+         wherever the portal's audience is. Font files load crossorigin per the
+         font-fetch spec, hence the crossorigin preloads. -->
+    <link rel="preload" href="/fonts/marcellus-400-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/ibm-plex-mono-400-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/fonts/fonts.css" />
   </head>
   <body>
     <noscript>You need to enable JavaScript to play nightraze.</noscript>

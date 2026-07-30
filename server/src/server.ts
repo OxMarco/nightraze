@@ -261,12 +261,33 @@ function clientLocation(
 // including the SPA fallback, so a new route can never become embeddable by
 // omission. Keyed on the response content type rather than the path for the
 // same reason.
+//
+// Everything is also readable cross-origin. Portal QA tooling probes our
+// resources from its own origin and reports anything opaque as missing; a
+// wildcard costs nothing here because no response varies by cookie or ambient
+// credential (auth is an explicit token), so CORS would only be gatekeeping
+// what is already public. Framing, not reading, is the boundary that matters —
+// and frame-ancestors above still enforces it.
 fastify.addHook("onSend", async (_req, reply, payload) => {
+  reply.header("access-control-allow-origin", "*");
   const contentType = String(reply.getHeader("content-type") ?? "");
   if (contentType.startsWith("text/html") && !reply.hasHeader("content-security-policy")) {
     reply.header("content-security-policy", NO_FRAMING);
   }
   return payload;
+});
+
+// Preflights would otherwise 404: no route registers OPTIONS, and a 404 fails
+// the preflight even with the header above. Answered here for every path so a
+// cross-origin caller with a custom header or method never gets stuck.
+fastify.addHook("onRequest", async (req, reply) => {
+  if (req.method !== "OPTIONS") return;
+  return reply
+    .header("access-control-allow-methods", "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS")
+    .header("access-control-allow-headers", req.headers["access-control-request-headers"] ?? "*")
+    .header("access-control-max-age", "86400")
+    .code(204)
+    .send();
 });
 
 // ---- HTTP API ----

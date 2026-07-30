@@ -15,10 +15,10 @@
      on the same rectangle the type does. On a notched phone these are not
      symmetric — top 47 vs bottom 34, and left != right in landscape — so a
      field that ignored them sat visibly off-center from the core. */
-  --modal-pad-t: max(24px, env(safe-area-inset-top));
-  --modal-pad-r: max(16px, env(safe-area-inset-right));
-  --modal-pad-b: max(24px, env(safe-area-inset-bottom));
-  --modal-pad-l: max(16px, env(safe-area-inset-left));
+  --modal-pad-t: calc(env(safe-area-inset-top) + 24px);
+  --modal-pad-r: calc(env(safe-area-inset-right) + 16px);
+  --modal-pad-b: calc(env(safe-area-inset-bottom) + 24px);
+  --modal-pad-l: calc(env(safe-area-inset-left) + 16px);
 }
 
 .modalBackdrop {

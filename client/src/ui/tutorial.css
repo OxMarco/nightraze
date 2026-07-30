@@ -7,7 +7,7 @@
   position: fixed;
   z-index: 6;
   left: 50%;
-  bottom: max(14px, env(safe-area-inset-bottom));
+  bottom: calc(env(safe-area-inset-bottom) + 14px);
   transform: translateX(-50%);
   width: min(430px, 92vw);
   padding: 14px 20px 16px;
@@ -103,12 +103,13 @@
   .coachKey .coachKeys { display: none; }
   .coachKey .coachTouch { display: inline; }
   /* clear the hide button, which owns the bottom-right corner on touch */
-  .coach { bottom: calc(max(14px, env(safe-area-inset-bottom)) + 96px); }
+  .coach { bottom: calc(env(safe-area-inset-bottom) + 14px + 96px); }
 }
-/* the pad scheme stacks a stick and an action row up the left edge, so the card
-   clears the whole column (stick top 130 + gap + a 62px button = 204) —
-   independent of pointer type, because the scheme is a choice, not a device */
-.coach.withPads { bottom: calc(max(22px, env(safe-area-inset-bottom)) + 196px); }
+/* the pad scheme holds the stick bottom-left and stacks two buttons up the
+   right edge; the centered card must clear the taller side — the button stack,
+   whose fluid height pads.css publishes as --pad-stack-top — independent of
+   pointer type, because the scheme is a choice, not a device */
+.coach.withPads { bottom: calc(var(--pad-stack-top, 146px) + 12px); }
 
 /* landscape phones: the arena is the scarce thing, so tighten everything */
 @media (max-height: 520px) {

@@ -1,7 +1,7 @@
 # CX22 production operations
 
 This deployment deliberately uses one authoritative game room on one Docker
-Compose host. That is the right trade-off for an initial 5–10 DAU: it keeps the
+Compose host. That is the right trade-off for an initial 5-10 DAU: it keeps the
 arena populated and recovery understandable. A second room, Redis, Kubernetes,
 PM2, and Node cluster mode are intentionally out of scope until measured load
 requires them.
@@ -58,7 +58,7 @@ security fixes are not missed.
 - A process exit is restarted by Docker immediately.
 - A live-but-unhealthy app, Traefik, or Docker socket proxy is marked
   unhealthy after two failed checks. Autoheal gives a frozen process 5 seconds
-  to stop; recovery should normally complete in roughly 20–25 seconds.
+  to stop; recovery should normally complete in roughly 20-25 seconds.
 - The browser reconnects abnormal WebSocket closures with jittered exponential
   backoff capped at 15 seconds. The arena is in memory, so a server restart gives
   the player a fresh run rather than restoring the interrupted run.

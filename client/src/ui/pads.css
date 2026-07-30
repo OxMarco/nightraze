@@ -2,14 +2,44 @@
    HUD — thin rings of held light over the water, nothing that reads as plastic
    console chrome.
 
-   One corner, not two: the stick sits in the bottom-left with the action row
-   directly above it, so the whole scheme occupies a single column and the rest
-   of the water stays clear. The two buttons share a diameter — a row of unequal
-   circles reads as a mistake before it reads as a hierarchy — so the jump is
-   marked as the primary by weight instead: a brighter rim, a hotter glow, and
-   the near-white of held light against the hide button's teal. Everything is kept
+   Two corners, two thumbs: the stick owns the bottom-left, the action buttons
+   stack up the bottom-right edge, so the phone is held in both hands and each
+   thumb has its own instrument. The two buttons share a diameter — a stack of
+   unequal circles reads as a mistake before it reads as a hierarchy — so the
+   jump is marked as the primary by weight instead: a brighter rim, a hotter
+   glow, the near-white of held light against the hide button's teal, and the
+   bottom slot, where the right thumb already rests. Everything is kept
    deliberately small: these are instruments laid over the arena, and the arena
    is the thing you are trying to see. */
+
+/* Fluid sizing shared by both corners (and read by the coach card, which has
+   to clear them). Sizes track vmin — the device's short edge, which is the
+   same physical edge in portrait and landscape — so rotating never jumps the
+   controls between size tiers, small phones shrink smoothly, and tablets get
+   proportionally larger instruments without a breakpoint ladder. The knob's
+   travel and deadzone are measured from the rendered sizes at runtime, so
+   nothing here needs restating in JS. */
+:root {
+  /* Gap from each screen edge. Per-side safe-area insets are added to this at
+     the point of use, since they differ side to side — added, not max()ed:
+     the inset marks where the unusable region *ends*, so max() spends the whole
+     gap paying for the notch and leaves the control flush against it. That is
+     invisible in portrait, where the side insets are 0 and the gap wins, and
+     wrong in landscape on a notched phone, where the 62px island inset swallows
+     an 18px gap whole and the button ends up touching the island. */
+  --pad-edge: clamp(18px, 3vmin, 32px);
+  /* ~102px on a small phone, ~150px on a tablet */
+  --pad-stick: clamp(92px, 70px + 9vmin, 150px);
+  --pad-knob: calc(var(--pad-stick) * 0.43);
+  /* ~56px on a phone, ~76px on a tablet */
+  --pad-btn: clamp(50px, 38px + 5vmin, 76px);
+  --pad-gap: clamp(10px, 1.6vmin, 16px);
+  /* top edge of the right-hand button stack, measured from the bottom of the
+     screen — the taller of the two corners, which the coach card clears */
+  --pad-stack-top: calc(
+    env(safe-area-inset-bottom) + var(--pad-edge) + var(--pad-btn) * 2 + var(--pad-gap)
+  );
+}
 
 .padStick,
 .padBtn {
@@ -24,10 +54,10 @@
 
 /* ---- stick: left thumb, steering only */
 .padStick {
-  left: max(22px, env(safe-area-inset-left));
-  bottom: max(22px, env(safe-area-inset-bottom));
-  width: 108px;
-  height: 108px;
+  left: calc(env(safe-area-inset-left) + var(--pad-edge));
+  bottom: calc(env(safe-area-inset-bottom) + var(--pad-edge));
+  width: var(--pad-stick);
+  height: var(--pad-stick);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -36,8 +66,8 @@
   box-shadow: inset 0 0 30px rgba(90, 255, 220, 0.05);
 }
 .padKnob {
-  width: 46px;
-  height: 46px;
+  width: var(--pad-knob);
+  height: var(--pad-knob);
   border-radius: 50%;
   border: 1px solid rgba(90, 255, 220, 0.5);
   background: radial-gradient(circle at 50% 42%, rgba(90, 255, 220, 0.3), rgba(1, 15, 14, 0.72) 70%);
@@ -46,10 +76,9 @@
      between frames would read as input lag on the one control that steers */
 }
 
-/* ---- action row, sitting directly above the stick.
-   Both share a bottom edge 12px clear of the stick's top (stick base 22 +
-   height 108 = 130; the row's bottom edge lands at 142), so the cluster reads
-   as one instrument rather than two strays. */
+/* ---- action stack, right edge: jump on the bottom under the resting thumb,
+   hide one gap above it, both sharing the stick's edge inset so the two
+   corners read as halves of one instrument. */
 .padBtn {
   padding: 0;
   display: flex;
@@ -70,10 +99,10 @@
 }
 
 .padJump {
-  left: calc(max(22px, env(safe-area-inset-left)) + 68px);
-  bottom: calc(max(22px, env(safe-area-inset-bottom)) + 120px);
-  width: 56px;
-  height: 56px;
+  right: calc(env(safe-area-inset-right) + var(--pad-edge));
+  bottom: calc(env(safe-area-inset-bottom) + var(--pad-edge));
+  width: var(--pad-btn);
+  height: var(--pad-btn);
   color: #eafff8;
   border: 2px solid rgba(216, 255, 242, 0.5);
   background: radial-gradient(circle at 50% 45%, rgba(216, 255, 242, 0.16), rgba(1, 15, 14, 0.55) 70%);
@@ -84,10 +113,12 @@
 .padJump.spent { opacity: 0.32; }
 
 .padHide {
-  left: max(22px, env(safe-area-inset-left));
-  bottom: calc(max(22px, env(safe-area-inset-bottom)) + 120px);
-  width: 56px;
-  height: 56px;
+  right: calc(env(safe-area-inset-right) + var(--pad-edge));
+  bottom: calc(
+    env(safe-area-inset-bottom) + var(--pad-edge) + var(--pad-btn) + var(--pad-gap)
+  );
+  width: var(--pad-btn);
+  height: var(--pad-btn);
   color: #5affdc;
   border: 1px solid rgba(90, 255, 220, 0.42);
   background: radial-gradient(circle at 50% 45%, rgba(90, 255, 220, 0.12), rgba(1, 15, 14, 0.5) 70%);
@@ -103,23 +134,3 @@
 }
 
 .padBtn:focus-visible { outline: 2px solid #d8fff2; outline-offset: 4px; }
-
-/* Narrow or short screens: shrink the column and close the gaps to match, so
-   the row still clears the stick's top edge (base 22 + height 92 = 114; the
-   row's bottom edge lands at 126). The knob's travel is measured from these
-   sizes at runtime rather than restated here — one place to get it wrong. */
-@media (max-width: 380px), (max-height: 460px) {
-  .padStick { width: 92px; height: 92px; }
-  .padKnob { width: 40px; height: 40px; }
-  .padJump {
-    width: 50px;
-    height: 50px;
-    left: calc(max(22px, env(safe-area-inset-left)) + 60px);
-    bottom: calc(max(22px, env(safe-area-inset-bottom)) + 104px);
-  }
-  .padHide {
-    width: 50px;
-    height: 50px;
-    bottom: calc(max(22px, env(safe-area-inset-bottom)) + 104px);
-  }
-}

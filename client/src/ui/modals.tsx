@@ -3,7 +3,6 @@ import { useConnectionStatus, useGameActions, useGameClient } from "../game/hook
 import { readBest, recordRun } from "../game/best.js";
 import { setScheme, useControlScheme, useIsTouch } from "../game/controls.js";
 import { proposeName, readName } from "../game/prefs.js";
-import { platform } from "../platform/current.js";
 import "./modals.css";
 
 // Motion encodes the state: rings expand outward on welcome (you're about to
@@ -127,14 +126,10 @@ export function StartScreen() {
 // ---------------------------------------------------------------- death
 export function DeathOverlay({ by, peak }: { by: string; peak: number }) {
   const client = useGameClient();
-  // recorded once, when the overlay mounts — one run, one entry
+  // recorded once, when the overlay mounts — one run, one entry. The host-page
+  // celebration is not here: it fired mid-run, the moment the record actually
+  // broke (game/best.ts) — this screen only reports it.
   const [run] = useState(() => recordRun(peak));
-  // The host page is allowed to celebrate with us, but only for something that
-  // actually happened once: a personal best is rare by construction, which is
-  // the whole contract on this call.
-  useEffect(() => {
-    if (run.isBest) platform().happytime();
-  }, [run.isBest]);
   return (
     <div className="modalBackdrop seeThrough">
       <Ripples mode="in" />

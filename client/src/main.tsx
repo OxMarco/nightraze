@@ -7,6 +7,7 @@ installCrashReporting();
 const root = createRoot(document.getElementById("root")!);
 const dashboardPath = location.pathname === "/metrics-dashboard" ||
   location.pathname === "/metrics-dashboard/";
+document.documentElement.classList.toggle("game-shell", !dashboardPath);
 document.body.classList.toggle("game-shell", !dashboardPath);
 
 if (dashboardPath) {

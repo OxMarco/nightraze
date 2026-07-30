@@ -8,6 +8,7 @@ import {
   useWorldStateThrottled,
 } from "./game/hooks.js";
 import { useControlScheme, useIsTouch } from "./game/controls.js";
+import { beginRun, noteLight } from "./game/best.js";
 import { confirmName, isNamePending } from "./game/prefs.js";
 import { beginTutorial, noteDash, noteToggle, useTutorial } from "./game/tutorial.js";
 import { platform } from "./platform/current.js";
@@ -58,6 +59,9 @@ function useGameplayReporting(state: string): void {
   useEffect(() => {
     if (state !== "open") return;
     platform().gameplayStart();
+    // Same trigger arms the record celebration: a run's "best to beat" is
+    // whatever storage held when this run started (game/best.ts).
+    beginRun();
     return () => platform().gameplayStop();
   }, [state]);
 }
@@ -119,11 +123,15 @@ function Arena() {
 
   // render loop: drain server effects, draw the interpolated frame
   useWorldFrames((frame) => {
+    const self = frame.players.find((p) => p.id === selfId);
     // our own player state is the only report of what the arena calls us —
     // the server may have sanitized the name we asked for (prefs.ts)
     if (isNamePending()) {
-      confirmName(frame.players.find((p) => p.id === selfId)?.name);
+      confirmName(self?.name);
     }
+    // the record celebration belongs to the living: only frames from an open
+    // run count toward it, never the corpse the server may still be showing us
+    if (status.state === "open" && self) noteLight(self.light);
     const renderer = rendererRef.current;
     if (!renderer) return;
     renderer.ingest(client.buffer.drainEffects());

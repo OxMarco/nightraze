@@ -1,9 +1,8 @@
 # nightraze.io — Game Design Document
 
 **Genre:** Free-for-all arena .io game (stealth / light-theft)
-**Platform:** Browser-first (CrazyGames, Poki and similar portals), mobile and desktop, one-finger playable
+**Platform:** Browser-first (CrazyGames, Poki and similar portals), mobile and desktop, mobile playable
 **Session length:** 3-8 minutes
-**Status:** v6. Vent-light cut — the arena runs on three verbs: eat, lunge, shutter (§8; design retained in §14). Contact-spill combat replaces the v3 strike model (history in Appendix A). Dark-state readability, mote lifecycle, and the gutter state are locked. Launch arena is featureless — occluders (monoliths) moved to the To-validate list (§14). Dash asymmetry is live (§7).
 
 Built ahead of the original plan: the arena runs on an authoritative server with real multiplayer, bots filling the population when humans are thin (§13). Perception is graded on the wire, not merely gated — the anti-cheat spine of a hidden-information game (§6). Leader-side answers shipping ahead of the §15 Q10 verdict: the crown (§11) and peak-as-run-score (§4). A leader-only offensive verb is held until that question has evidence.
 
@@ -319,7 +318,7 @@ The original plan was single-player-with-bots first, presented as an arena — t
 
 **The bots must sell theory of mind.** This is the launch's strategic risk: the game's differentiator is prediction, and prediction against a bot is only convincing if the bot is genuinely uncertain and genuinely deceptive. Two disproportionate investments: (1) after a player's douse, bots *randomize* among the four post-afterimage guesses rather than cheating or following one heuristic; (2) bots **douse-juke the player** convincingly — being fooled is how players learn the move exists. Bots run the full ruleset otherwise: identical perception rules — including the degraded shimmer view, so a wake never tells a bot how big the thing making it is (§6) — flee glow, chip upward, avoid downward contact, respect the gutter.
 
-Portal success metrics to build for: time-to-fun under 30 seconds (spawn → first mote → first spark), 3–5 minute average session with "one more run" death flow — which the gutter state exists to guarantee — load under 3 seconds, portrait-mode support.
+Portal success metrics to build for: time-to-fun under 30 seconds (spawn → first mote → first spark), 3-5 minute average session with "one more run" death flow — which the gutter state exists to guarantee — load under 3 seconds, portrait-mode support.
 
 **The returning player starts one tap from the arena.** The name box is pre-filled with the last name the server actually accepted (a sanitized or profanity-rejected name is never remembered — see §4 on what else the browser keeps), and the start screen shows the personal record they are about to play against. Both exist to make the second session cheaper to begin than the first, which is the metric that decides whether a portal game has a retention curve at all. Integrate the portal SDK (ads, and CrazyGames' Friends Connect one-click join) before submission, not after.
 
@@ -335,7 +334,7 @@ Features designed in earlier revisions but cut from launch scope. Each ships onl
 
 ### Occluders (monoliths) — cut in v5, design retained
 
-Dark crystal formations scattered on the arena (reference: 10–14, radii 70–150, minimum 350 units apart) that **block light but not movement**. Key properties of the retained design:
+Dark crystal formations scattered on the arena (reference: 10-14, radii 70-150, minimum 350 units apart) that **block light but not movement**. Key properties of the retained design:
 
 - **Never pin.** Because they don't block movement, they can't trap you against geometry, and drag-steering on mobile never snags. The juke space stays open in every direction.
 - **Attenuate rather than block** (reference: 180 units of effective radius lost per sight-line crossing, exposed as a balance lever). Absolute occlusion would repeal irreducible glow — a leader parked behind a stone would be invisible, gutting the core differentiator. Under attenuation, small players hide completely behind stones while a 500+ glow leader leaks a halo around them: the stones become the leader's best-but-imperfect refuge and the map's hotspots.
@@ -349,7 +348,7 @@ Also held back: smoke curtains, eclipse zones, and other exotic occluders (conte
 
 ### Vent-light — cut in v6, design retained
 
-The heir to agar's spit-mass, thematically inverted: players may deliberately shed a chunk of held light (reference: 25–30% per vent), dropped as a loose-mote pile. Shipped provisionally in v5, removed in v6 to hold the arena at three verbs (§8).
+The heir to agar's spit-mass, thematically inverted: players may deliberately shed a chunk of held light (reference: 25-30% per vent), dropped as a loose-mote pile. Shipped provisionally in v5, removed in v6 to hold the arena at three verbs (§8).
 
 What the one verb generated: a **panic escape** — dumping light can carry a hunted mid-size player back below the irreducible-glow threshold, buying true invisibility at the price of score and health; a **bribe** — "take the pile, stop chasing me"; and a **bait** — sit dark and motionless beside your own vented pile and ambush the collector with a dash, which is the mechanic that put a price tag on ambush camping. It also produced a role, the **Baiter** (§11), which goes with it.
 
@@ -370,7 +369,7 @@ If it returns, it returns *after* onboarding proves players can price their own 
 1. Does tap-vs-drag misfire enough on real thumbs to justify a fallback (double-tap mode toggle in settings)?
 2. Irreducible glow at G=0 vs G=14: where between "leader hides freely" and "leader is food" does first place stay *desirable*? Runnable as a live sweep inside one sitting with the same testers (§10) — move the dial between rounds rather than between builds, and read it with the Q10 signals below.
 3. **Does the douse juke survive a featureless arena** — do afterimage timing and shimmer thresholds alone produce a genuine guessing game, or does pursuit collapse into a radius sweep? This is the trigger question for §14 occluders.
-4. *Retired in v6 (number kept so Q5–Q11 references stay put).* ~~Vent-light: does the bait loop justify a second verb on mobile?~~ — cut before it could be tested, on comprehension rather than ergonomics (§8). The question that replaces it lives in §14: does anything *break* without it?
+4. *Retired in v6 (number kept so Q5-Q11 references stay put).* ~~Vent-light: does the bait loop justify a second verb on mobile?~~ — cut before it could be tested, on comprehension rather than ergonomics (§8). The question that replaces it lives in §14: does anything *break* without it?
 5. Is dark vision at 60 tactical or claustrophobic on a 6-inch screen, with the contracting iris in place?
 6. Time-to-first-scare: does a fresh spawn meet meaningful danger inside 30 seconds at 14 bots / 2600²?
 7. Boundary corners: does corner-pinning against the gutter state get ugly enough to need rounded corners or repulsion?
