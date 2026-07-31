@@ -24,6 +24,14 @@
 .modalBackdrop {
   position: fixed;
   inset: 0;
+  /* Same iOS Safari quirk the HUD hits (see viewport.ts): `inset: 0` sizes this
+     to the layout viewport, so `align-items: center` centers the core on a box
+     that extends above the fold and the type sits half the URL-bar overhang too
+     high. Re-anchoring to the visible region centers it on what is on screen.
+     Over-constrained top/height/bottom drops `bottom`, which is the intent; both
+     values fall back to the inset box when the properties are unset. */
+  top: var(--vv-top, 0px);
+  height: var(--vv-height, auto);
   z-index: 10;
   display: flex;
   align-items: center;

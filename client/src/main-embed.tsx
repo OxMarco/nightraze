@@ -18,11 +18,13 @@ import { CrashBoundary } from "./CrashBoundary.js";
 import { crazyGamesPlatform } from "./platform/crazygames.js";
 import { platform, setPlatform } from "./platform/current.js";
 import { installCrashReporting } from "./telemetry.js";
+import { installViewportVars } from "./viewport.js";
 import "./index.css";
 
 setPlatform(crazyGamesPlatform);
 document.documentElement.classList.add("game-shell");
 document.body.classList.add("game-shell");
+installViewportVars();
 
 // ready() before loadingStart(): the SDK's own handshake is not our loading
 // time, and its methods do not answer until it has finished one.

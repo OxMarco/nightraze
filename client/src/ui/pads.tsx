@@ -1,11 +1,12 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useGameClient, useWorldStateThrottled } from "../game/hooks.js";
 import { noteDash, noteToggle } from "../game/tutorial.js";
 import { REF } from "../render/core.js";
 import "./pads.css";
 
-/* The opt-in two-thumb scheme (§9): a stick on the left, jump and hide on
-   the right. Two buttons rather than one overloaded button, on purpose — the
+/* The default pad scheme (§9): a stick on the left, jump and hide on the
+   right, with arena tap-to-move alongside it. Two buttons rather than one
+   overloaded button, on purpose — the
    two verbs have opposite timing profiles, and any short/long or multi-press
    scheme makes a touch-down ambiguous until its timer expires. The jump is the
    fastest verb in the game and the ambush strike; it cannot wait behind a
@@ -20,26 +21,38 @@ import "./pads.css";
     quietly delete it. Proportional so it survives the pad changing size. */
 const DEADZONE_FRAC = 0.16;
 
-export function TouchPads({ selfId }: { selfId: number }) {
+interface DirectionRef {
+  current: { x: number; y: number };
+}
+
+export function TouchPads({
+  selfId,
+  headingRef,
+  onStickActiveChange,
+}: {
+  selfId: number;
+  headingRef: DirectionRef;
+  onStickActiveChange: (active: boolean) => void;
+}) {
   const client = useGameClient();
   // The stick's heading, remembered so the jump button has something to aim
-  // along when the thumb is off the stick. Screen-space, like every other
-  // vector the client sends.
-  const headingRef = useRef({ x: 0, y: -1 });
+  // along when the thumb is off the stick. Steering by touching the water
+  // shares this ref, so the dedicated jump follows whichever of the two the
+  // player last used. Screen-space, like every other vector the client sends.
 
   const steer = useCallback(
     (tx: number, ty: number) => {
       if (tx !== 0 || ty !== 0) headingRef.current = { x: tx, y: ty };
       client.sendDirection(tx, ty);
     },
-    [client],
+    [client, headingRef],
   );
 
   const jump = useCallback(() => {
     const { x, y } = headingRef.current;
     client.sendDash(x, y);
     noteDash();
-  }, [client]);
+  }, [client, headingRef]);
 
   const hide = useCallback(() => {
     client.sendToggle();
@@ -48,24 +61,33 @@ export function TouchPads({ selfId }: { selfId: number }) {
 
   return (
     <>
-      <Stick onSteer={steer} />
+      <Stick onSteer={steer} onActiveChange={onStickActiveChange} />
       <ActionButtons selfId={selfId} onJump={jump} onHide={hide} />
     </>
   );
 }
 
 // ---------------------------------------------------------------- stick
-function Stick({ onSteer }: { onSteer: (tx: number, ty: number) => void }) {
+function Stick({
+  onSteer,
+  onActiveChange,
+}: {
+  onSteer: (tx: number, ty: number) => void;
+  onActiveChange: (active: boolean) => void;
+}) {
   const baseRef = useRef<HTMLDivElement | null>(null);
   const knobRef = useRef<HTMLSpanElement | null>(null);
   const pointerIdRef = useRef<number | null>(null);
   const [knob, setKnob] = useState({ x: 0, y: 0 });
+
+  useEffect(() => () => onActiveChange(false), [onActiveChange]);
 
   const release = (ev: React.PointerEvent) => {
     if (pointerIdRef.current !== ev.pointerId) return;
     pointerIdRef.current = null;
     setKnob({ x: 0, y: 0 });
     onSteer(0, 0);
+    onActiveChange(false);
   };
 
   const track = (ev: React.PointerEvent) => {
@@ -100,6 +122,7 @@ function Stick({ onSteer }: { onSteer: (tx: number, ty: number) => void }) {
       onPointerDown={(ev) => {
         if (pointerIdRef.current !== null) return;
         pointerIdRef.current = ev.pointerId;
+        onActiveChange(true);
         ev.currentTarget.setPointerCapture(ev.pointerId);
         track(ev);
       }}

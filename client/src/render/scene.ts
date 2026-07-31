@@ -90,6 +90,15 @@ export class SceneRenderer {
     this.darkCanvas.height = this.H;
   }
 
+  /** Map a visible arena point to the world using the camera actually drawn. */
+  screenToWorld(screenX: number, screenY: number): { x: number; y: number } | null {
+    if (!this.camInit) return null;
+    return {
+      x: screenX - this.W / 2 + this.cam.x,
+      y: screenY - this.H / 2 + this.cam.y,
+    };
+  }
+
   /** Convert server effects into local particles. Call once per frame with drainEffects(). */
   ingest(effects: Effect[]): void {
     for (const e of effects) {
@@ -307,6 +316,10 @@ export class SceneRenderer {
     // ---- above the darkness ----
     ctx.save();
     ctx.translate(W / 2 - this.cam.x, H / 2 - this.cam.y);
+
+    // No destination marker: a touch on the water is a heading held for as
+    // long as the thumb is down, not a route the blob travels alone, so there
+    // is no pending commitment left on screen for a reticle to report.
 
     for (const f of this.fx) {
       const p = f.life / f.max;

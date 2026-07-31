@@ -21,15 +21,15 @@ const COPY: Record<
     title: "eat to grow",
     body: "drift over the motes. each one is light — your score, your reach, and your life.",
     keys: "cursor steers",
-    touch: "drag to steer",
-    pads: "the stick steers",
+    touch: "hold anywhere to swim there",
+    pads: "stick, or hold the water · double-tap to sprint",
   },
   jump: {
     title: "jump to take",
     body: "light also lives in other lanterns. jump into one and contact drains it.",
     keys: "click jumps",
     touch: "tap to jump",
-    pads: "the jump button · or tap the water to aim",
+    pads: "the jump button lunges",
   },
   hide: {
     title: "go dark",

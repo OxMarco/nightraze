@@ -28,6 +28,36 @@ const config = {
   apiUrl: location.origin,
 };
 
+/** Pad-mode double-tap recognition. Each constituent tap still has the tighter
+    200ms / 12px tap test below; these only decide whether two valid taps form
+    the optional sprint gesture. */
+const DOUBLE_TAP_MS = 320;
+const DOUBLE_TAP_RADIUS = 36;
+
+/** Distance from the lantern — which the camera pins to screen centre — at
+    which a held thumb asks for full speed, as a fraction of the short side of
+    the viewport. A quarter is about a hundred points on a phone: inside it the
+    throttle is proportional, so a thumb resting near the body still creeps and
+    standing still stays reachable (§6), and outside it every comfortable thumb
+    position is full tilt rather than only the screen edges. The mouse keeps the
+    raw 40px offset the server documents; a pointer that can sit anywhere on a
+    desk doesn't need the span stretched to thumb reach. */
+const TOUCH_FULL_THROTTLE_FRAC = 0.25;
+
+/** Screen point -> steering command for a held thumb. The vector is measured
+    from screen centre because that is where the camera keeps the player: point
+    at the water you want and this is the direction to it. */
+function touchSteer(clientX: number, clientY: number): { x: number; y: number } {
+  const dx = clientX - innerWidth / 2;
+  const dy = clientY - innerHeight / 2;
+  const len = Math.hypot(dx, dy);
+  if (len < 1) return { x: 0, y: 0 };
+  const span = Math.min(innerWidth, innerHeight) * TOUCH_FULL_THROTTLE_FRAC;
+  // 40 is the server's throttle ceiling: at or past `span` this saturates.
+  const throttle = Math.min(1, len / span) * 40;
+  return { x: (dx / len) * throttle, y: (dy / len) * throttle };
+}
+
 export default function App() {
   return (
     <GameProvider config={config}>
@@ -73,7 +103,16 @@ function Arena() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rendererRef = useRef<SceneRenderer | null>(null);
   const pointerRef = useRef({ x: innerWidth / 2, y: innerHeight / 2 });
-  const touchRef = useRef<{ t: number; x: number; y: number; moved: number } | null>(null);
+  const touchRef = useRef<{
+    pointerId: number;
+    t: number;
+    x: number;
+    y: number;
+    moved: number;
+  } | null>(null);
+  const padHeadingRef = useRef({ x: 0, y: -1 });
+  const stickActiveRef = useRef(false);
+  const lastArenaTapRef = useRef<{ t: number; x: number; y: number } | null>(null);
 
   const selfId = status.state === "open" || status.state === "dead" ? status.playerId : 0;
   const worldSize = status.state === "open" || status.state === "dead" ? status.worldSize : 2600;
@@ -92,6 +131,11 @@ function Arena() {
   useEffect(beginTutorial, []);
   const teaching =
     status.state === "open" && (tutorial.step !== null || tutorial.closing);
+
+  const setStickActive = useCallback((active: boolean) => {
+    stickActiveRef.current = active;
+    if (active) lastArenaTapRef.current = null;
+  }, []);
 
   // renderer lifecycle
   useEffect(() => {
@@ -132,6 +176,7 @@ function Arena() {
     // the record celebration belongs to the living: only frames from an open
     // run count toward it, never the corpse the server may still be showing us
     if (status.state === "open" && self) noteLight(self.light);
+
     const renderer = rendererRef.current;
     if (!renderer) return;
     renderer.ingest(client.buffer.drainEffects());
@@ -150,43 +195,105 @@ function Arena() {
     [client],
   );
 
-  // input: pointer steers, click/tap jumps, keys toggle the lantern.
-  // Under the pad scheme the stick owns steering, so a touch on the water is
-  // only ever a candidate tap — but the tap still jumps, and still jumps
-  // *toward the touch point*, which is what keeps the aimed ambush strike (§9)
-  // instead of trading it for a button that can only fire along the heading.
+  // input: pointer steers, desktop click / one-finger tap jumps, keys toggle
+  // the lantern. Under the pad scheme, a short water tap sets a destination
+  // and a double-tap sprints toward it; jump remains on its dedicated button
+  // and uses the current travel heading.
   useEffect(() => {
+    const steer = (ev: PointerEvent) => {
+      if (ev.pointerType === "mouse") {
+        client.sendDirection(ev.clientX - innerWidth / 2, ev.clientY - innerHeight / 2);
+        return;
+      }
+      // The stick always wins. While a thumb holds it, a second thumb on the
+      // water is a spectator rather than a second steering input — two live
+      // sources would fight over one direction every frame.
+      if (stickActiveRef.current) return;
+      const { x, y } = touchSteer(ev.clientX, ev.clientY);
+      // remembered so the pad's jump button has the current travel heading to
+      // lunge along when the steering thumb is elsewhere
+      if (x !== 0 || y !== 0) padHeadingRef.current = { x, y };
+      client.sendDirection(x, y);
+    };
     const onMove = (ev: PointerEvent) => {
-      if (ev.pointerType !== "mouse" && !touchRef.current) return;
-      pointerRef.current = { x: ev.clientX, y: ev.clientY };
       const t0 = touchRef.current;
+      if (
+        ev.pointerType !== "mouse" &&
+        (!t0 || t0.pointerId !== ev.pointerId)
+      ) return;
+      pointerRef.current = { x: ev.clientX, y: ev.clientY };
       if (t0 && ev.pointerType !== "mouse") {
         t0.moved = Math.max(t0.moved, Math.hypot(ev.clientX - t0.x, ev.clientY - t0.y));
-        if (padsOn) return;
       }
-      client.sendDirection(ev.clientX - innerWidth / 2, ev.clientY - innerHeight / 2);
+      steer(ev);
     };
     const onDown = (ev: PointerEvent) => {
       if ((ev.target as HTMLElement).closest(".ui")) return;
       if (ev.pointerType === "mouse") {
         dash(ev.clientX, ev.clientY);
       } else {
-        touchRef.current = { t: performance.now(), x: ev.clientX, y: ev.clientY, moved: 0 };
+        if (touchRef.current) return;
+        touchRef.current = {
+          pointerId: ev.pointerId,
+          t: performance.now(),
+          x: ev.clientX,
+          y: ev.clientY,
+          moved: 0,
+        };
         pointerRef.current = { x: ev.clientX, y: ev.clientY };
+        // Touch-down is already an instruction: the thumb names a place and the
+        // lantern sets off toward it, with no drag needed to commit. Waiting for
+        // a pointermove made a still thumb mean nothing, which is exactly the
+        // "define a direction first" step neither scheme should have.
+        steer(ev);
       }
     };
     const onUp = (ev: PointerEvent) => {
       const t0 = touchRef.current;
+      if (!t0 || t0.pointerId !== ev.pointerId || ev.pointerType === "mouse") return;
       touchRef.current = null;
-      if (!t0 || ev.pointerType === "mouse") return;
-      // every released touch returns to a stationary intent — except under the
-      // pads, where the stick is holding a direction this touch never set and
-      // must not be allowed to cancel
-      if (!padsOn) client.sendDirection(0, 0);
-      if (performance.now() - t0.t < 200 && t0.moved < 12) dash(ev.clientX, ev.clientY);
+      const tapped = performance.now() - t0.t < 200 && t0.moved < 12;
+
+      if (padsOn) {
+        // The stick always wins. A water touch made by the other thumb while
+        // the stick is held never steered, so releasing it must not stop the
+        // stick — and it cannot count as a tap either.
+        if (stickActiveRef.current) {
+          lastArenaTapRef.current = null;
+          return;
+        }
+        // Lifting the thumb stops the lantern and drops the camera lead: the
+        // water no longer holds a route to keep travelling along.
+        client.sendDirection(0, 0);
+        pointerRef.current = { x: innerWidth / 2, y: innerHeight / 2 };
+        if (!tapped || status.state !== "open") {
+          lastArenaTapRef.current = null;
+          return;
+        }
+        const now = performance.now();
+        const previousTap = lastArenaTapRef.current;
+        const doubleTapped =
+          previousTap !== null &&
+          now - previousTap.t <= DOUBLE_TAP_MS &&
+          Math.hypot(ev.clientX - previousTap.x, ev.clientY - previousTap.y) <=
+            DOUBLE_TAP_RADIUS;
+        lastArenaTapRef.current = doubleTapped
+          ? null
+          : { t: now, x: ev.clientX, y: ev.clientY };
+        // double-tap still sprints, now aimed straight at the tapped water
+        // rather than at a route it no longer sets
+        if (doubleTapped) dash(ev.clientX, ev.clientY);
+        return;
+      }
+
+      client.sendDirection(0, 0);
+      if (tapped) dash(ev.clientX, ev.clientY);
     };
     const stopInput = () => {
       touchRef.current = null;
+      stickActiveRef.current = false;
+      lastArenaTapRef.current = null;
+      pointerRef.current = { x: innerWidth / 2, y: innerHeight / 2 };
       client.sendDirection(0, 0);
     };
     const onVisibility = () => {
@@ -216,7 +323,7 @@ function Arena() {
       window.removeEventListener("keydown", onKey);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [client, dash, padsOn]);
+  }, [client, dash, padsOn, status.state]);
 
   return (
     <>
@@ -227,7 +334,13 @@ function Arena() {
           the first-descent coach — the arena itself stays unlettered */}
       {teaching && <Tutorial state={tutorial} selfId={selfId} />}
       {padsOn
-        ? status.state === "open" && <TouchPads selfId={selfId} />
+        ? status.state === "open" && (
+            <TouchPads
+              selfId={selfId}
+              headingRef={padHeadingRef}
+              onStickActiveChange={setStickActive}
+            />
+          )
         : <LanternButton />}
       {status.state === "dead" && <DeathOverlay by={status.by} peak={status.peakLight} />}
     </>

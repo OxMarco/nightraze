@@ -1,14 +1,19 @@
 /* Which touch scheme the player is on.
 
-   The default is the pad scheme: a stick bottom-left, jump and hide above
-   it. This answers §9's recorded watch item — drag-anywhere steering puts the
-   player's thumb over the darkness they are squinting into, and a stick in the
-   corner moves the thumb off the water.
+   The default is the pad scheme: a stick bottom-left, jump and hide opposite
+   it, plus tap-to-move and double-tap-to-sprint on the water. This answers
+   §9's recorded watch item — steering with the thumb over the water puts a
+   finger across the darkness the player is squinting into, while the pad
+   scheme lets each player choose moment by moment between the corner stick and
+   destination gestures.
 
-   The one-finger scheme (drag anywhere to steer, tap to jump, corner button to
-   hide) stays available as an opt-out, because "one-finger playable" is a
-   platform claim in the GDD header and part of the portal pitch. Flipping
-   either way is the player's choice and it sticks.
+   The one-finger scheme stays available as an opt-out, because "one-finger
+   playable" is a platform claim in the GDD header and part of the portal pitch:
+   touch anywhere and the lantern swims toward your thumb for as long as you
+   hold it, tap to jump, corner button to hide. Nothing to aim but the
+   destination itself — you point at the water you want to be in, and touch-down
+   alone commits it, with no drag needed first. Flipping either way is the
+   player's choice and it sticks.
 
    Both schemes are touch schemes, and neither reaches a mouse-only desktop:
    useIsTouch() gates every render site, so a desktop steers with the cursor and

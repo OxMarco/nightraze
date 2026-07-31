@@ -34,7 +34,9 @@ body.game-shell {
 #c { position: fixed; inset: 0; display: block; }
 
 /* sonar-console HUD */
-.hudState { position: fixed; z-index: 5; top: calc(env(safe-area-inset-top) + 14px); left: calc(env(safe-area-inset-left) + 16px); pointer-events: none;
+/* --vv-top keeps the top-anchored HUD inside the region iOS Safari actually
+   shows; see viewport.ts. It is 0 everywhere else. */
+.hudState { position: fixed; z-index: 5; top: calc(env(safe-area-inset-top) + 14px + var(--vv-top, 0px)); left: calc(env(safe-area-inset-left) + 16px); pointer-events: none;
   font-size: .8125rem; letter-spacing: .14em; text-transform: uppercase; color: rgba(90,255,220,.75);
   text-shadow: 0 0 14px rgba(90,255,220,.3); }
 .hudState b { font-size: 1.0625rem; letter-spacing: .06em; }
@@ -42,7 +44,7 @@ body.game-shell {
 .hudState.gutterState { color: rgba(255,61,104,.9); animation: strobe .35s steps(2) infinite; }
 @keyframes strobe { 50% { opacity: .3; } }
 
-.leaderboard { position: fixed; z-index: 5; top: calc(env(safe-area-inset-top) + 14px); right: calc(env(safe-area-inset-right) + 16px); pointer-events: none;
+.leaderboard { position: fixed; z-index: 5; top: calc(env(safe-area-inset-top) + 14px + var(--vv-top, 0px)); right: calc(env(safe-area-inset-right) + 16px); pointer-events: none;
   text-align: right; font-size: .78rem; line-height: 1.6; color: rgba(150,180,195,.75); }
 .leaderboard h4 { font-size: .6875rem; letter-spacing: .2em; text-transform: uppercase; color: rgba(90,255,220,.45); margin-bottom: 3px; }
 

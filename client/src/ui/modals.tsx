@@ -95,13 +95,14 @@ export function StartScreen() {
           </span>
           <span className="touch">
             {scheme === "pads"
-              ? "stick steers · jump and hide buttons · tap the water to aim a jump"
-              : "drag steers · tap jumps · lantern button hides"}
+              ? "stick or hold the water moves · double-tap sprints · jump and hide buttons"
+              : "hold anywhere to swim there · tap jumps · lantern button hides"}
           </span>
         </div>
         {touch && (
           <div className="schemePick">
             <span className="schemeLbl">touch controls</span>
+            {/* default first, so the order reads as the recommendation */}
             <button
               type="button"
               className={"schemeOpt" + (scheme === "pads" ? " on" : "")}
@@ -114,7 +115,7 @@ export function StartScreen() {
               className={"schemeOpt" + (scheme === "one-finger" ? " on" : "")}
               onClick={() => setScheme("one-finger")}
             >
-              one finger
+              touch to move
             </button>
           </div>
         )}
