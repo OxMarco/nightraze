@@ -394,3 +394,84 @@ test("a mid-session lever move reaches players already connected", () => {
   assert.equal(tunings[0].glowG, 11);
   room.setGlowG(6);
 });
+
+/* The board is trimmed on the server, so these cover the whole contract the
+   client relies on: five rows, true ranks, and the caller's own row present
+   however far down the ladder it has fallen. */
+function makeLadder(count) {
+  const room = new Room();
+  room.close();
+  // descending light, so the join order is also the finishing order
+  return {
+    room,
+    players: Array.from({ length: count }, (_, i) => {
+      const p = room.addPlayer(new FakeSocket(), `p${i + 1}`);
+      p.light = 1000 - i * 10;
+      return p;
+    }),
+  };
+}
+
+test("the leaderboard is five rows of true ranks, brightest first", () => {
+  const { room, players } = makeLadder(8);
+  const board = room.leaderboard();
+
+  assert.equal(board.length, 5);
+  assert.deepEqual(board.map((e) => e.rank), [1, 2, 3, 4, 5]);
+  assert.deepEqual(board.map((e) => e.name), players.slice(0, 5).map((p) => p.name));
+  assert.equal(board[0].light, 1000, "light is floored, not rounded or scaled");
+});
+
+test("a player below the cut takes the last row, keeping its real rank", () => {
+  const { room, players } = makeLadder(11);
+  const board = room.leaderboard(players[10].id);
+
+  assert.equal(board.length, 5, "the board never grows a sixth row");
+  assert.deepEqual(board.map((e) => e.rank), [1, 2, 3, 4, 11]);
+  assert.equal(board[4].id, players[10].id);
+  assert.equal(board[3].id, players[3].id, "rank 5 yields the row, rank 4 stays");
+});
+
+test("a player inside the top five is not doubled onto the board", () => {
+  const { room, players } = makeLadder(11);
+  const board = room.leaderboard(players[2].id);
+
+  assert.deepEqual(board.map((e) => e.rank), [1, 2, 3, 4, 5]);
+  assert.equal(board.filter((e) => e.id === players[2].id).length, 1);
+});
+
+test("the dead are off the ladder, and cannot claim a row by asking", () => {
+  const { room, players } = makeLadder(7);
+  players[0].dead = true;
+  players[6].dead = true;
+
+  const board = room.leaderboard(players[6].id);
+
+  assert.equal(board.length, 5);
+  assert.deepEqual(board.map((e) => e.rank), [1, 2, 3, 4, 5]);
+  assert.ok(!board.some((e) => e.id === players[0].id || e.id === players[6].id));
+  assert.equal(board[0].id, players[1].id, "the brightest survivor is rank 1");
+});
+
+test("players level on light hold a stable order between polls", () => {
+  const { room, players } = makeLadder(6);
+  for (const p of players) p.light = 100;
+
+  const first = room.leaderboard().map((e) => e.id);
+  // re-insert in a different iteration order: ties must not follow the map
+  const moved = players[2];
+  room.players.delete(moved.id);
+  room.players.set(moved.id, moved);
+
+  assert.deepEqual(room.leaderboard().map((e) => e.id), first);
+});
+
+test("an unknown id asks for nothing, and an empty arena has no board", () => {
+  const { room, players } = makeLadder(6);
+
+  assert.deepEqual(room.leaderboard(99999).map((e) => e.rank), [1, 2, 3, 4, 5],
+    "a stale id leaves the top of the ladder untouched");
+
+  for (const p of players) room.players.delete(p.id);
+  assert.deepEqual(room.leaderboard(players[0].id), []);
+});

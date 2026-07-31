@@ -303,7 +303,12 @@ fastify.get("/health", { logLevel: "silent" }, async (_req, reply) => {
   });
 });
 
-fastify.get("/leaderboard", async () => room.leaderboard());
+fastify.get("/leaderboard", async (req) => {
+  // ?id= is the caller saying which player it is, so it can be given its own
+  // rank when it sits below the cut. Junk is simply no claim at all.
+  const id = Number((req.query as { id?: string }).id);
+  return room.leaderboard(Number.isInteger(id) ? id : undefined);
+});
 
 // Aggregates only; the underlying anonymous visitor and session rows are never
 // exposed over HTTP. With no token configured the route does not exist.

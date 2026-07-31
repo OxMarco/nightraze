@@ -329,7 +329,7 @@ function Arena() {
     <>
       <canvas ref={canvasRef} id="c" />
       <Hud selfId={selfId} />
-      <Leaderboard />
+      <Leaderboard selfId={selfId} />
       {/* the controls are taught on the start screen and, once per browser, by
           the first-descent coach — the arena itself stays unlettered */}
       {teaching && <Tutorial state={tutorial} selfId={selfId} />}
@@ -359,15 +359,18 @@ function Hud({ selfId }: { selfId: number }) {
   );
 }
 
-function Leaderboard() {
-  const { entries } = useLeaderboard(2000);
+function Leaderboard({ selfId }: { selfId: number }) {
+  const { entries } = useLeaderboard(2000, selfId);
   if (!entries.length) return null;
+  /* The server sends exactly the rows to paint: the top of the ladder, with our
+     own row substituted into the last one when we are below the cut. The rank
+     printed is the real one, so a distant player reads "11." and not "5.". */
   return (
     <div className="leaderboard">
-      <h4>Brightest</h4>
-      {entries.slice(0, 5).map((e, i) => (
-        <div key={i}>
-          {i + 1}. {e.name} · {e.light}
+      <h4>Leaderboard</h4>
+      {entries.map((e) => (
+        <div key={e.id}>
+          {e.rank}. {e.id === selfId ? <b>{e.name}</b> : e.name} · {e.light}
         </div>
       ))}
     </div>

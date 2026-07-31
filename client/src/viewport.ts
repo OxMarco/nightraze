@@ -3,7 +3,7 @@
    is both taller than the visible area and starts above it — measured on
    iPhone 17 Pro / iOS 26: layout 714px, visible 669px, layout top 45px above the
    fold. A HUD pinned to `top: 14px` therefore paints at -31px and is simply
-   gone, taking the "brightest" header and the rank-1 row with it.
+   gone, taking the "leaderboard" header and the rank-1 row with it.
 
    `env(safe-area-inset-top)` cannot rescue this: in ordinary Safari browsing
    (as opposed to a standalone/PWA window) every inset reports 0, because the

@@ -82,8 +82,9 @@ export function useWorldStateThrottled(intervalMs = 250): WorldFrame | null {
   return frame;
 }
 
-/** Leaderboard via the HTTP API, polled. */
-export function useLeaderboard(pollIntervalMs = 2000): {
+/** Leaderboard via the HTTP API, polled. Naming ourselves gets our own row
+ *  back with its true rank even when we are below the cut. */
+export function useLeaderboard(pollIntervalMs = 2000, selfId = 0): {
   entries: LeaderboardEntry[];
   error: string | null;
 } {
@@ -96,7 +97,8 @@ export function useLeaderboard(pollIntervalMs = 2000): {
 
     const fetchOnce = async () => {
       try {
-        const res = await fetch(`${config.apiUrl}/leaderboard`);
+        const query = selfId ? `?id=${selfId}` : "";
+        const res = await fetch(`${config.apiUrl}/leaderboard${query}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = (await res.json()) as LeaderboardEntry[];
         if (!cancelled) {
@@ -114,7 +116,7 @@ export function useLeaderboard(pollIntervalMs = 2000): {
       cancelled = true;
       clearInterval(id);
     };
-  }, [config.apiUrl, pollIntervalMs]);
+  }, [config.apiUrl, pollIntervalMs, selfId]);
 
   return { entries, error };
 }

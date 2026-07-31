@@ -45,8 +45,13 @@ body.game-shell {
 @keyframes strobe { 50% { opacity: .3; } }
 
 .leaderboard { position: fixed; z-index: 5; top: calc(env(safe-area-inset-top) + 14px + var(--vv-top, 0px)); right: calc(env(safe-area-inset-right) + 16px); pointer-events: none;
-  text-align: right; font-size: .78rem; line-height: 1.6; color: rgba(150,180,195,.75); }
+  text-align: right; font-size: .78rem; line-height: 1.6; color: rgba(150,180,195,.75);
+  /* the rows are right-aligned and repoll every 2s: proportional digits would
+     shove the names sideways every time someone's light ticks over */
+  font-variant-numeric: tabular-nums; }
 .leaderboard h4 { font-size: .6875rem; letter-spacing: .2em; text-transform: uppercase; color: rgba(90,255,220,.45); margin-bottom: 3px; }
+/* the player's own row — bold alone is faint at this size, so it lights up too */
+.leaderboard b { font-weight: 600; color: #eafff8; }
 
 .lanternBtn { position: fixed; z-index: 6; right: calc(env(safe-area-inset-right) + 18px); bottom: calc(env(safe-area-inset-bottom) + 22px);
   width: 74px; height: 74px; padding: 0; border-radius: 50%;

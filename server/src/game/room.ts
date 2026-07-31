@@ -207,7 +207,11 @@ interface BotBrain {
   aggression: number;              // personality: 0 = grazer that ignores prey, 1 = relentless hunter
 }
 
-export interface LeaderboardEntry { name: string; light: number; }
+export interface LeaderboardEntry { id: number; name: string; light: number; rank: number; }
+
+/** Rows on the board. The client paints what it is sent, so this is the only
+ *  place the number lives. */
+export const LEADERBOARD_ROWS = 5;
 
 export interface RoomHealth {
   ok: boolean;
@@ -1071,11 +1075,22 @@ export class Room {
     }
   }
 
-  leaderboard(): LeaderboardEntry[] {
-    return [...this.players.values()]
+  /* Exactly the rows a client should paint, in order. The caller may name
+     itself: a player below the cut then takes the last row, carrying its true
+     rank, rather than being handed the whole ladder to search. Trimming here
+     rather than in the client leaves one place that decides the board's shape. */
+  leaderboard(selfId?: number): LeaderboardEntry[] {
+    const ranked = [...this.players.values()]
       .filter((p) => !p.dead)
-      .sort((a, b) => b.light - a.light)
-      .slice(0, 10)
-      .map((p) => ({ name: p.name, light: Math.floor(p.light) }));
+      // id breaks ties: without it, players level on light swap rows between
+      // polls and the reader's eye is dragged across a board that hasn't moved
+      .sort((a, b) => b.light - a.light || a.id - b.id)
+      .map((p, i) => ({ id: p.id, name: p.name, light: Math.floor(p.light), rank: i + 1 }));
+    const top = ranked.slice(0, LEADERBOARD_ROWS);
+    if (selfId !== undefined && top.length && !top.some((e) => e.id === selfId)) {
+      const self = ranked.find((e) => e.id === selfId);
+      if (self) top[top.length - 1] = self;
+    }
+    return top;
   }
 }
