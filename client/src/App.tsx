@@ -99,23 +99,28 @@ function useJoinName(): () => string {
 /**
  * Tells the host page when the player is actually playing.
  *
- * "open" is the only state where the lantern is in the water and inputs mean
- * something; every other state is a menu, a corpse, or a dropped socket. That
- * maps exactly onto what a portal wants from gameplayStart/gameplayStop, and it
- * gets respawn for free — "once more" returns the connection to open, which is
- * a fresh start as far as the host is concerned. Keyed on the state string
- * rather than the status object so a new playerId or world size doesn't
- * re-announce a run that never stopped.
+ * Playing begins at "connecting" — the press of the play button — not at
+ * "open". The distinction matters to the host more than to us: CrazyGames
+ * takes the first gameplayStart as the end of the initial download, and a
+ * start gated on our server handshake folds network time into a measurement
+ * of bundle size — or, on a QA run where the socket never settles, reports a
+ * game that no one ever played. "reconnecting" stays in for the same reason
+ * it isn't a departure in useSessionPresence: a dropped socket on its way
+ * back is not the player taking a break. A corpse is, so "dead" is out and
+ * respawn comes for free — "once more" reopens the connection, which is a
+ * fresh start as far as the host is concerned. Collapsed to a boolean so
+ * connecting → open doesn't re-announce a run that never stopped.
  */
 function useGameplayReporting(state: string): void {
+  const playing = state === "connecting" || state === "reconnecting" || state === "open";
   useEffect(() => {
-    if (state !== "open") return;
+    if (!playing) return;
     platform().gameplayStart();
     // Same trigger arms the record celebration: a run's "best to beat" is
     // whatever storage held when this run started (game/best.ts).
     beginRun();
     return () => platform().gameplayStop();
-  }, [state]);
+  }, [playing]);
 }
 
 // ---------------------------------------------------------------- arena

@@ -39,6 +39,8 @@ function installSdk(): void {
     updateRoom: guard("updateRoom", () => undefined),
     leftRoom: guard("leftRoom", () => undefined),
     inviteLink: guard("inviteLink", () => "https://crazygames.com/g/nightraze?p=1"),
+    showInviteButton: guard("showInviteButton", () => "https://crazygames.com/g/nightraze?p=1"),
+    hideInviteButton: guard("hideInviteButton", () => undefined),
     addJoinRoomListener: (l: (p: Record<string, string>) => void) => {
       calls.push({ method: "addJoinRoomListener", args: [] });
       if (mode === "throwing") throw new Error("disabled");
@@ -141,11 +143,28 @@ test("entering the arena tells the portal the room and its joinability", () => {
     isJoinable: false,
     inviteParams: { arena: "nightraze-arena" },
   });
+  // A full arena must not be advertised on the portal's own invite button
+  // either — same claim, second surface.
+  assert.equal(called("showInviteButton").length, 0);
+  assert.equal(called("hideInviteButton").length, 1);
+});
+
+test("a joinable arena raises the portal's invite button with the same params", () => {
+  crazyGamesPlatform.session.enter({
+    id: "nightraze-arena",
+    joinable: true,
+    params: { arena: "nightraze-arena" },
+  });
+  const [call] = called("showInviteButton");
+  assert.ok(call, "a joinable session must offer the portal's own button");
+  assert.deepEqual(call.args[0], { arena: "nightraze-arena" });
+  assert.equal(called("hideInviteButton").length, 0);
 });
 
 test("leaving retracts it", () => {
   crazyGamesPlatform.session.leave();
   assert.equal(called("leftRoom").length, 1);
+  assert.equal(called("hideInviteButton").length, 1);
 });
 
 test("a join request reaches the game, and unsubscribing detaches it", () => {

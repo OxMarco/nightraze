@@ -61,6 +61,8 @@ interface CrazyGamesGame {
   }): void;
   leftRoom(): void;
   inviteLink(params: Record<string, string>): string;
+  showInviteButton(params: Record<string, string>): string;
+  hideInviteButton(): void;
   readonly inviteParams: Record<string, string> | null;
   addJoinRoomListener(listener: (params: Record<string, string>) => void): void;
   removeJoinRoomListener(listener: (params: Record<string, string>) => void): void;
@@ -238,16 +240,30 @@ const crazyGamesAccount: PlatformAccount = {
    (close 1013), and a portal that advertises a full arena as joinable sends
    friends into that bounce. game/session.ts owns working out which it is. */
 const crazyGamesSession: PlatformSession = {
-  enter: (state) =>
+  enter: (state) => {
     attempt("updateRoom", (api) =>
       api.game.updateRoom({
         roomId: state.id,
         isJoinable: state.joinable,
         inviteParams: state.params,
       }),
-    ),
+    );
+    // The portal's own invite button, in its chrome outside our frame — the
+    // twin of the in-arena InviteButton, minting the same link. CrazyGames
+    // deprecates it in favour of updateRoom above but still checks for it at
+    // submission, and either way the contract is the same as updateRoom's:
+    // it may only offer an arena a friend can actually get into.
+    if (state.joinable) {
+      attempt("showInviteButton", (api) => void api.game.showInviteButton(state.params ?? {}));
+    } else {
+      attempt("hideInviteButton", (api) => api.game.hideInviteButton());
+    }
+  },
 
-  leave: () => attempt("leftRoom", (api) => api.game.leftRoom()),
+  leave: () => {
+    attempt("leftRoom", (api) => api.game.leftRoom());
+    attempt("hideInviteButton", (api) => api.game.hideInviteButton());
+  },
 
   link: (params) => read("inviteLink", (api) => api.game.inviteLink(params), null),
 

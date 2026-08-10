@@ -105,14 +105,22 @@ export function useJoinable(active: boolean): boolean {
 /**
  * Keeps the host's idea of where the player is in step with the arena.
  *
- * "open" and "dead" are both in the session: a corpse is still in the water
- * with a respawn button, and telling the portal we left only to say we
- * arrived again a second later makes the friends list flicker. Everything else
- * — the menu, a drop, the capacity bounce — is out.
+ * The session begins at "connecting", not "open": pressing play is joining the
+ * room, and the handshake in between is not a state a friends list needs to
+ * distinguish — a portal told about the room only after the socket settles
+ * misses exactly the sessions where joining was slow, which are the ones worth
+ * following a friend into. "dead" stays in for the same flicker reason: a
+ * corpse is still in the water with a respawn button, and "reconnecting" is a
+ * dropped socket on its way back, not a departure. Everything else — the menu,
+ * a final drop, the capacity bounce — is out.
  */
 export function useSessionPresence(): void {
   const status = useConnectionStatus();
-  const inArena = status.state === "open" || status.state === "dead";
+  const inArena =
+    status.state === "connecting" ||
+    status.state === "reconnecting" ||
+    status.state === "open" ||
+    status.state === "dead";
   const joinable = useJoinable(inArena);
 
   // Announcing and retracting are split because they answer to different
