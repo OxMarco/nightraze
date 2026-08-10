@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useConnectionStatus, useGameActions, useGameClient } from "../game/hooks.js";
 import { readBest, recordRun } from "../game/best.js";
 import { setScheme, useControlScheme, useIsTouch } from "../game/controls.js";
-import { proposeName, readName } from "../game/prefs.js";
+import { useIdentity } from "../game/identity.js";
+import { MAX_NAME, proposeName, readName } from "../game/prefs.js";
+import { InviteButton } from "./invite.js";
 import "./modals.css";
 
 // Motion encodes the state: rings expand outward on welcome (you're about to
@@ -39,9 +41,19 @@ export function StartScreen() {
   // which thumb layout it prefers is noise
   const touch = useIsTouch();
   const waiting = status.state === "connecting" || status.state === "reconnecting";
+  // On a host with its own accounts the player already has a name their friends
+  // know, and it beats anything typed here (game/identity.ts).
+  const { player, canSignIn, signIn } = useIdentity();
 
   const go = () => {
     if (waiting) return;
+    if (player) {
+      // Not proposed and not remembered: the host owns this name, and storing
+      // it would only mean prefilling a stranger's handle for the next guest on
+      // a shared machine.
+      connect(player.name);
+      return;
+    }
     const typed = name.trim();
     proposeName(typed);   // remembered only if the arena hands it back intact
     connect(typed || "ember");
@@ -64,18 +76,40 @@ export function StartScreen() {
           <br />
           contact <b>drains</b> · drain a lantern dry to snuff it
         </p>
-        <input
-          className="nameInput"
-          placeholder="name your player"
-          maxLength={15}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && go()}
-          autoFocus
-        />
+        {player ? (
+          /* Shown rather than editable, and shown at all rather than silently
+             used, because the point of carrying the host's name into the arena
+             is that it is the name on the leaderboard your friends are reading.
+             A player who cannot see what they are called cannot know that. */
+          <div className="identity">
+            {player.avatarUrl && (
+              <img className="identityFace" src={player.avatarUrl} alt="" aria-hidden="true" />
+            )}
+            <span className="identityName">{player.name}</span>
+          </div>
+        ) : (
+          <input
+            className="nameInput"
+            placeholder="name your player"
+            maxLength={MAX_NAME}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && go()}
+            autoFocus
+          />
+        )}
         <button className="modalAction" onClick={go} disabled={waiting}>
           {waiting ? "descending…" : "light the lantern"}
         </button>
+        {/* Offered under the action, never in front of it: signing in is how
+            friends find each other on the ladder, but it is not the price of
+            playing, and a guest who ignores this loses nothing. */}
+        {canSignIn && (
+          <button className="modalQuiet" onClick={() => void signIn()}>
+            sign in to play under your name
+          </button>
+        )}
+        <InviteButton />
         {best > 0 && (
           <div className="numLbl dim">your best · {best}</div>
         )}
@@ -119,8 +153,51 @@ export function StartScreen() {
             </button>
           </div>
         )}
+        <PrivacyNotice hostAccount={player !== null} />
       </div>
     </div>
+  );
+}
+
+/* The standing notice, on the last screen before the arena.
+
+   Non-blocking by requirement and by preference: no gate, no dialog, no button
+   to dismiss, because nothing here needs consent to be lawful — there are no
+   cookies, no trackers and no ad network to ask about. It is a disclosure, and
+   a disclosure's whole job is to be findable by the person who wants it and
+   invisible to the person who does not.
+
+   It opens in a new tab deliberately. Inside a portal frame the game is not the
+   top-level document, and navigating the frame to a policy would replace the
+   game with a wall of text inside somebody else's page, with no way back.
+
+   The href is absolute, not "/privacy". Root-relative resolves against whoever
+   is serving the document, which is us today — but if the game is ever uploaded
+   to a portal's own hosting rather than framed from nightraze.io, "/privacy"
+   silently becomes a link to *their* privacy page. This is also the URL that
+   gets typed into the submission form, so there is one canonical answer. */
+const PRIVACY_URL = "https://nightraze.io/privacy";
+const TERMS_URL = "https://nightraze.io/terms";
+
+/* `hostAccount` is not a detail. "no account" is true of nightraze and false of
+   the screen it is printed on the moment a portal account is signed in — the
+   player is looking at their own username and avatar two lines above it. A
+   disclosure that contradicts what the reader can see is worse than none, so
+   the claim narrows to the one we can still make: the account is the host's,
+   and we keep none of our own. The policy page has always said this at
+   length; this line just stops disagreeing with it. */
+function PrivacyNotice({ hostAccount }: { hostAccount: boolean }) {
+  return (
+    <p className="legalNote">
+      {hostAccount ? "no account of ours" : "no account"}, no cookies, no trackers ·{" "}
+      <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer">
+        what we store
+      </a>{" "}
+      ·{" "}
+      <a href={TERMS_URL} target="_blank" rel="noopener noreferrer">
+        terms
+      </a>
+    </p>
   );
 }
 

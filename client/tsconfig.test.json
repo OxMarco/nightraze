@@ -1,0 +1,25 @@
+/* Typechecking for client/test.
+
+   A separate project rather than another entry in tsconfig.json's `include`,
+   for one reason: these files need Node's globals and the app must not have
+   them. Merging the two would make `process.env`, `Buffer` and NodeJS.Timeout
+   typecheck inside a browser bundle, which is exactly the mistake this
+   codebase's platform layer exists to keep out of the app.
+
+   Left unchecked entirely — as they were — a rename in src/ produced no error
+   anywhere until someone ran the suite, and these are the only coverage the
+   portal adapter has. */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Two files deliberately import a source by the path that actually exists
+    // ("../src/platform/web.ts") rather than the built ".js" the app uses,
+    // because they must load it *after* installing their stubs and a static
+    // import would hoist above them.
+    "allowImportingTsExtensions": true,
+    // Node's globals for the stubs and assertions, plus vitest's own types for
+    // the environment docblocks and vi.*. The DOM comes from the base config.
+    "types": ["node", "vitest/globals"]
+  },
+  "include": ["test", "vitest.config.ts"]
+}

@@ -40,6 +40,8 @@ export class SceneRenderer {
   private W = 0;
   private H = 0;
   private DPR = 1;
+  /** The abyss backdrop, rebuilt only when the viewport height changes. */
+  private bg!: CanvasGradient;
 
   private readonly worldSize: number;
   private readonly speckle: { x: number; y: number; a: number }[] = [];
@@ -88,6 +90,9 @@ export class SceneRenderer {
     this.canvas.style.height = this.H + "px";
     this.darkCanvas.width = this.W;
     this.darkCanvas.height = this.H;
+    this.bg = this.ctx.createLinearGradient(0, 0, 0, this.H);
+    this.bg.addColorStop(0, ABYSS_TOP);
+    this.bg.addColorStop(1, ABYSS_BOT);
   }
 
   /** Map a visible arena point to the world using the camera actually drawn. */
@@ -195,10 +200,12 @@ export class SceneRenderer {
 
     // ================= draw =================
     ctx.setTransform(this.DPR, 0, 0, this.DPR, 0, 0);
-    const bg = ctx.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0, ABYSS_TOP);
-    bg.addColorStop(1, ABYSS_BOT);
-    ctx.fillStyle = bg;
+    // The abyss gradient depends only on the viewport height, so it is built in
+    // resize() rather than here. The other gradients in this renderer are
+    // radial and centred on a moving body, which is why they cannot get the
+    // same treatment — this one was the only per-frame allocation that had no
+    // reason to be one.
+    ctx.fillStyle = this.bg;
     ctx.fillRect(0, 0, W, H);
 
     ctx.save();

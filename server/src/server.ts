@@ -82,11 +82,11 @@ const METRICS_TOKEN = process.env.METRICS_TOKEN ?? "";
 const CRASH_REPORT_WINDOW_MS = 60_000;
 const CRASH_REPORTS_PER_IP = 6;
 const CRASH_REPORTS_GLOBAL = 120;
-const BROWSER_CRASH_KINDS = new Set([
+const BROWSER_CRASH_KINDS = [
   "window-error",
   "unhandled-rejection",
   "react-render",
-]);
+];
 const connsByIp = new Map<string, number>();
 const liveSockets = new Set<import("ws").WebSocket>();
 const crashReportsByIp = new Map<string, { startedAt: number; count: number }>();
@@ -297,6 +297,10 @@ fastify.get("/health", { logLevel: "silent" }, async (_req, reply) => {
   return reply.code(ok ? 200 : 503).send({
     ok,
     players: room.humanCount(),
+    // Reported alongside the count because a count on its own says nothing
+    // about whether there is room: the client turns the pair into "can a
+    // friend still get in?" without having to hardcode our capacity.
+    maxPlayers: MAX_PLAYERS,
     bots: room.botCount(),
     g: room.glowG(),
     simulation,
@@ -325,14 +329,30 @@ if (METRICS_TOKEN) {
 
 // Browser exceptions are intentionally reduced to a category. Messages,
 // stacks, URLs, names and IP addresses are not retained.
-fastify.post("/telemetry/crash", { bodyLimit: 4_096 }, async (req, reply) => {
-  const body = (req.body ?? {}) as { visitorId?: unknown; kind?: unknown };
-  const visitorId = validVisitorId(body.visitorId);
-  if (!visitorId) return reply.code(400).send({ error: "invalid visitor" });
-  const kind = typeof body.kind === "string" && BROWSER_CRASH_KINDS.has(body.kind)
-    ? body.kind
-    : null;
-  if (!kind) return reply.code(400).send({ error: "invalid crash kind" });
+fastify.post("/telemetry/crash", {
+  bodyLimit: 4_096,
+  // Declared rather than hand-checked: Fastify rejects anything that does not
+  // match with a 400 before the handler runs, so the shape is enforced in one
+  // place and stated where the route is read. The visitor pattern is the same
+  // one validVisitorId applies to the WebSocket's telemetry frame, which has no
+  // schema to hang off.
+  //
+  // additionalProperties is deliberately left open. This endpoint is called
+  // from a keepalive fetch whose response nobody reads, so a strict schema
+  // would turn "a newer client sends one more field" into crash reports
+  // vanishing silently — the one failure a crash reporter must not have.
+  schema: {
+    body: {
+      type: "object",
+      required: ["visitorId", "kind"],
+      properties: {
+        visitorId: { type: "string", pattern: "^[a-zA-Z0-9_-]{16,64}$" },
+        kind: { type: "string", enum: BROWSER_CRASH_KINDS },
+      },
+    },
+  },
+}, async (req, reply) => {
+  const { visitorId, kind } = req.body as { visitorId: string; kind: string };
   if (!allowCrashReport(req.ip || "unknown")) {
     reply.header("retry-after", String(CRASH_REPORT_WINDOW_MS / 1_000));
     return reply.code(429).send({ error: "crash report rate limit reached" });
@@ -347,13 +367,20 @@ fastify.post("/telemetry/crash", { bodyLimit: 4_096 }, async (req, reply) => {
 // place desirable?" question actually gets answered; every player is told the
 // new value so their darkness keeps matching the server's perception.
 if (TUNE_TOKEN) {
-  fastify.post("/tune", async (req, reply) => {
+  // The schema states the type; the range stays with setGlowG, which owns it.
+  // Duplicating the sweep bound here would mean two places to change when §15
+  // Q2 wants a wider bracket, and one of them silently wrong.
+  fastify.post("/tune", {
+    schema: {
+      body: { type: "object", properties: { g: { type: "number" } } },
+    },
+  }, async (req, reply) => {
     if (req.headers["x-tune-token"] !== TUNE_TOKEN) {
       return reply.code(403).send({ error: "bad tune token" });
     }
-    const body = (req.body ?? {}) as { g?: unknown };
+    const body = (req.body ?? {}) as { g?: number };
     if (body.g !== undefined) {
-      const applied = room.setGlowG(Number(body.g));
+      const applied = room.setGlowG(body.g);
       if (applied === null) return reply.code(400).send({ error: "g out of range" });
       fastify.log.warn({ g: applied }, "lever moved: irreducible glow (G)");
     }
@@ -405,6 +432,13 @@ fastify.get("/play", { websocket: true }, (socket, req) => {
   let sessionId = 0;
   metric(() => { sessionId = metricsStore.startSession(null, location); });
 
+  // The player exists before anything can refer to it. The listeners below all
+  // close over it, and while none of them can fire before this line runs
+  // today — nothing yields between here and the end of the handler — a `const`
+  // read from a callback declared above it is a temporal-dead-zone crash
+  // waiting for the first `await` anyone inserts.
+  const player = room.addPlayer(socket, name);
+
   // Browser WebSockets automatically answer control-frame pings with pongs.
   // One outstanding sample at a time avoids treating a delayed pong as a newer
   // measurement. RTT is aggregated; individual payloads are not stored.
@@ -427,7 +461,6 @@ fastify.get("/play", { websocket: true }, (socket, req) => {
     metric(() => metricsStore.recordPing(activeSessionId, pingMs));
   });
 
-  const player = room.addPlayer(socket, name);
   ipByPlayer.set(player.id, ip);
   if (sessionId !== 0) sessionByPlayer.set(player.id, sessionId);
   locationByPlayer.set(player.id, location);
@@ -470,6 +503,18 @@ if (existsSync(join(publicDir, "index.html"))) {
     // wildcard:false registers one route per file instead of a catch-all, which
     // leaves every unmatched path to the handler below — the SPA fallback.
     wildcard: false,
+    // The client build writes a .br and a .gz beside every text asset (see the
+    // precompress plugin in client/vite.config.ts). This serves whichever the
+    // browser asked for and the plain file when it asked for nothing, which
+    // takes the first load from ~327 kB to ~88 kB without spending a
+    // millisecond of the simulation's event loop on compressing anything.
+    preCompressed: true,
+    // wildcard:false builds its route table by globbing the directory, which
+    // would otherwise give every .br and .gz a public URL of its own — fetched
+    // directly they arrive as an undecodable download rather than as the script
+    // they hold. Keeping them out of the glob costs the compression nothing:
+    // preCompressed reads the sibling off disk by name, never through a route.
+    globIgnore: ["**/*.br", "**/*.gz"],
     setHeaders(reply, path) {
       // Vite fingerprints everything it emits under /assets, so those may be
       // cached forever. index.html must always be revalidated, or a browser
@@ -496,6 +541,26 @@ if (existsSync(join(publicDir, "index.html"))) {
   } else {
     fastify.log.warn("embed.html missing from the client build; /embed disabled");
   }
+
+  // Standing documents, served at extensionless paths because that is how they
+  // get cited — in a portal submission form, in a store listing, in an email.
+  // Explicit routes for the same reason /embed is one: without them the SPA
+  // fallback answers /privacy with the game and HTTP 200, so a reviewer opening
+  // the policy URL sees an arena and a link that looks live is quietly broken.
+  // The list is what may exist, not what must: privacy.html ships today and
+  // terms.html is served the moment it is added, with no second deploy needed.
+  const documents = ["privacy", "terms"].filter((page) =>
+    existsSync(join(publicDir, `${page}.html`)),
+  );
+  for (const page of documents) {
+    fastify.get(`/${page}`, async (_req, reply) => reply.sendFile(`${page}.html`));
+  }
+  // /tos is what people type when they guess. Redirected rather than duplicated
+  // so exactly one URL is the citable one.
+  if (documents.includes("terms")) {
+    fastify.get("/tos", async (_req, reply) => reply.redirect("/terms", 301));
+  }
+  fastify.log.info({ documents }, "serving standing documents");
 
   fastify.setNotFoundHandler((req, reply) => {
     // Client-side routes must resolve to the app shell; unknown API verbs must

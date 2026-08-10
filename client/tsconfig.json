@@ -10,5 +10,9 @@
     "skipLibCheck": true,
     "noEmit": true
   },
+  // Only the app. The suite is typechecked by tsconfig.test.json, which is a
+  // separate project so that @types/node stays out of here: this is a browser
+  // bundle, and code that reaches for `process` or a NodeJS.Timeout should not
+  // typecheck just because the tests need Node's globals.
   "include": ["src"]
 }

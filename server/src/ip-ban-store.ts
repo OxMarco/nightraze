@@ -64,6 +64,14 @@ export class IpBanStore {
     }
 
     this.db = new DatabaseSync(path, { timeout: 1_000 });
+    // WAL survives an unclean container stop with the last committed ban intact,
+    // and keeps the ban write from blocking on a concurrent read. NORMAL rather
+    // than FULL because losing the most recent few milliseconds of ban history
+    // to a power cut costs a cheater a few extra minutes of freedom, and the
+    // fsync per write costs every kick.
+    if (path !== ":memory:") {
+      this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;");
+    }
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS ip_bans (
         ip TEXT PRIMARY KEY,

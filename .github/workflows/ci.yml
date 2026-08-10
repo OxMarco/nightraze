@@ -18,8 +18,13 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: |
+            package-lock.json
             client/package-lock.json
             server/package-lock.json
+      # Three installs, not two: the root one is lint tooling only. It has to be
+      # separate because typescript-eslint cannot run against the typescript@7
+      # both workspaces build with — see eslint.config.js for the whole story.
+      - run: npm ci
       - run: npm ci --prefix client
       - run: npm ci --prefix server
       - run: make test

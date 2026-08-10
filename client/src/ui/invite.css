@@ -1,0 +1,57 @@
+/* The invite affordance, in two places that want two different weights.
+
+   On the start screen it is a quiet line under the main action — descending is
+   the thing you came to do, bringing someone is the thing you might. In the
+   arena it is a corner control, sitting with the leaderboard rather than the
+   lantern button, because it belongs to the company you keep and not to the
+   three verbs. Both are the same element; only placement changes. */
+
+.inviteBtn {
+  display: block;
+  margin: 14px auto 0;
+  padding: 3px 2px;
+  font-family: inherit;
+  font-size: 0.6875rem;
+  letter-spacing: 0.22em;
+  text-transform: lowercase;
+  color: var(--slate-dim);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  transition: color 0.2s, text-shadow 0.2s;
+}
+.inviteBtn:hover { color: var(--glow); }
+.inviteBtn:focus-visible { outline: 2px solid var(--glow-hot); outline-offset: 4px; }
+
+/* Confirmation is a glow rather than a colour change: the arena's whole visual
+   grammar is light appearing, and a green tick would be from another game. */
+.inviteBtn.done {
+  color: var(--glow);
+  text-shadow: 0 0 18px rgba(90, 255, 220, 0.55);
+}
+
+/* ---- in the arena: under the light readout, top left.
+
+   Not the top right: the leaderboard is there, and the leaderboard is the
+   reason this button exists — a player looks at those names, wants one of them
+   to be a friend's, and this is the answer. Sitting directly beneath the light
+   readout instead keeps it out of the leaderboard's right-aligned rows, which
+   reflow every two seconds, and off both bottom corners, where the lantern
+   button and the thumb pads live. The offset clears one line of .hudState. */
+.inviteBtn.inArena {
+  position: fixed;
+  z-index: 5;
+  top: calc(env(safe-area-inset-top) + 40px + var(--vv-top, 0px));
+  left: calc(env(safe-area-inset-left) + 16px);
+  margin: 0;
+  padding: 4px 2px;
+}
+
+/* A phone in portrait has the readout, the leaderboard and both thumb pads
+   competing for the same edges; the invite is the one thing here that can wait
+   for the surface, so it goes away rather than crowd them. It is still on the
+   start screen, which is where a player is standing when they think to ask
+   someone along. */
+@media (max-width: 560px) {
+  .inviteBtn.inArena { display: none; }
+}

@@ -46,6 +46,13 @@ export class MetricsStore {
     this.db = new DatabaseSync(path, { timeout: 1_000 });
     this.db.exec(`
       PRAGMA journal_mode = WAL;
+      -- recordPing commits a transaction per sample: one every ten seconds per
+      -- connected player, which at capacity is ten commits a second on the
+      -- game's own event loop. NORMAL keeps WAL's crash safety and drops the
+      -- fsync per commit; the exposure is losing the last few milliseconds of
+      -- latency samples and session bookkeeping to a power cut, which is not
+      -- data anything depends on being complete.
+      PRAGMA synchronous = NORMAL;
       CREATE TABLE IF NOT EXISTS sessions (
         id INTEGER PRIMARY KEY,
         visitor_id TEXT,
@@ -78,6 +85,14 @@ export class MetricsStore {
       CREATE INDEX IF NOT EXISTS sessions_started ON sessions (started_at);
       CREATE INDEX IF NOT EXISTS daily_users_day ON daily_users (day);
       CREATE INDEX IF NOT EXISTS ping_samples_time ON ping_samples (recorded_at);
+      -- The p95 below asks for one row from the middle of the window sorted by
+      -- latency. With only the time index, SQLite answers that by sorting every
+      -- sample in the window on each /metrics request — the largest table here
+      -- by orders of magnitude, since it gains a row per player per ten
+      -- seconds. Leading on ping_ms makes the ORDER BY an index walk, and
+      -- carrying recorded_at makes the window filter a covering read, so the
+      -- table itself is never touched.
+      CREATE INDEX IF NOT EXISTS ping_samples_value ON ping_samples (ping_ms, recorded_at);
       CREATE INDEX IF NOT EXISTS ban_events_time ON ban_events (issued_at);
       CREATE INDEX IF NOT EXISTS crash_events_time ON crash_events (occurred_at);
     `);
@@ -157,6 +172,7 @@ export class MetricsStore {
       deliberately remain intact because their totals are part of the API. */
   sweep(now = Date.now()): MetricsSweepResult {
     const cutoff = now - DETAIL_RETENTION_MS;
+    let result: MetricsSweepResult;
     this.db.exec("BEGIN");
     try {
       const sessions = this.db.prepare(
@@ -169,7 +185,7 @@ export class MetricsStore {
         "DELETE FROM ping_samples WHERE recorded_at < ?",
       ).run(cutoff);
       this.db.exec("COMMIT");
-      return {
+      result = {
         sessions: Number(sessions.changes),
         dailyUsers: Number(dailyUsers.changes),
         pingSamples: Number(pingSamples.changes),
@@ -178,6 +194,22 @@ export class MetricsStore {
       this.db.exec("ROLLBACK");
       throw err;
     }
+
+    // Deliberately after the transaction closes, so a failure here cannot reach
+    // a catch that would try to roll back a transaction already committed.
+    //
+    // Load-bearing rather than housekeeping. snapshot()'s p95 asks for one row
+    // from the middle of the latency window in sorted order; with no statistics
+    // SQLite has no reason to believe the window filter is unselective, so it
+    // takes the time index and sorts the whole window in a temp b-tree.
+    // Measured on 2M samples that is a two second query — and it runs on the
+    // event loop the simulation ticks on, so one /metrics request stutters the
+    // arena for every connected player. With statistics it takes the covering
+    // index instead and answers in ~40ms. `optimize` rather than a blanket
+    // ANALYZE: 2ms on a cold 2M-row table, and a no-op once nothing has changed
+    // enough to matter.
+    this.db.exec("PRAGMA optimize");
+    return result;
   }
 
   snapshot(currentPlaying: number, now = Date.now()): MetricsSnapshot {

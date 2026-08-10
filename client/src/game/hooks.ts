@@ -51,7 +51,15 @@ export function useGameActions(): {
 export function useWorldFrames(onFrame: (frame: WorldFrame) => void): void {
   const client = useGameClient();
   const callbackRef = useRef(onFrame);
-  callbackRef.current = onFrame;
+  // Refreshed after the commit rather than during render. A render can be
+  // thrown away — React is allowed to render without committing — and a ref
+  // written from a discarded render leaves the loop below calling a closure
+  // that never became the UI. The initial value is already in place from
+  // useRef, and the loop only ever runs between commits, so nothing reads a
+  // stale callback in the gap.
+  useEffect(() => {
+    callbackRef.current = onFrame;
+  });
 
   useEffect(() => {
     let rafId = 0;

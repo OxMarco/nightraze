@@ -48,7 +48,10 @@ test("sanitizeName never yields an empty or overlong name", () => {
   assert.equal(sanitizeName(""), "ember");
   assert.equal(sanitizeName("\u200b\u200b   "), "ember");
   assert.equal(sanitizeName(null), "ember");
-  assert.ok(sanitizeName("x".repeat(50)).length <= 15);
+  // 20 is CFG.maxNameLen: wide enough for a portal username to arrive intact,
+  // still short enough that a name cannot crowd the leaderboard.
+  assert.ok(sanitizeName("x".repeat(50)).length <= 20);
+  assert.equal(sanitizeName("x".repeat(50)).length, 20);
 });
 
 test("profane names fall back to the default", () => {

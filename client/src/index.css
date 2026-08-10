@@ -21,8 +21,13 @@ body.game-shell {
   touch-action: none;
   font-family: "Avenir Next", "Segoe UI", system-ui, sans-serif;
   color: #a8c8c0;
+  /* A drag across the arena must steer, not select the HUD text behind it. The
+     two dead prefixes are here because portal QA greps for the four-line form
+     verbatim; -webkit- is the one that still does work, on iOS Safari. */
   user-select: none;
   -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 /* Reset, so it must lose every argument it has with a real rule. Written as
    `body.game-shell *` it scored (0,1,1) — higher than any single-class selector

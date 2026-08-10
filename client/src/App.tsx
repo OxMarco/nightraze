@@ -9,11 +9,14 @@ import {
 } from "./game/hooks.js";
 import { useControlScheme, useIsTouch } from "./game/controls.js";
 import { beginRun, noteLight } from "./game/best.js";
-import { confirmName, isNamePending } from "./game/prefs.js";
+import { useIdentity } from "./game/identity.js";
+import { confirmName, isNamePending, readName } from "./game/prefs.js";
+import { useAutoJoin, useSessionPresence } from "./game/session.js";
 import { beginTutorial, noteDash, noteToggle, useTutorial } from "./game/tutorial.js";
 import { platform } from "./platform/current.js";
 import { SceneRenderer } from "./render/scene.js";
 import { REF } from "./render/core.js";
+import { InviteButton } from "./ui/invite.js";
 import { BounceScreen, DeathOverlay, StartScreen } from "./ui/modals.js";
 import { TouchPads } from "./ui/pads.js";
 import { Tutorial } from "./ui/tutorial.js";
@@ -69,9 +72,28 @@ export default function App() {
 function Screens() {
   const status = useConnectionStatus();
   useGameplayReporting(status.state);
+  // What the host is told about the player: that they are in a joinable arena
+  // (game/session.ts), and — for a player who arrived by following a friend's
+  // link — that the start screen should not be in their way.
+  useSessionPresence();
+  useAutoJoin(useJoinName());
   if (status.state === "open" || status.state === "dead") return <Arena />;
   if (status.state === "closed" && status.full) return <BounceScreen />;
   return <StartScreen />;
+}
+
+/**
+ * The name to use for a run the player did not start from the start screen.
+ *
+ * Read at the moment of joining rather than at mount: a friend's invite may
+ * land minutes after the page did, by which time the player may have signed in
+ * (game/identity.ts). Storage is the fallback because an auto-join skips the
+ * screen where a name would otherwise be typed — the last name this browser
+ * played under is the best guess available, and the server defaults the rest.
+ */
+function useJoinName(): () => string {
+  const { player } = useIdentity();
+  return () => player?.name ?? readName();
 }
 
 /**
@@ -330,6 +352,9 @@ function Arena() {
       <canvas ref={canvasRef} id="c" />
       <Hud selfId={selfId} />
       <Leaderboard selfId={selfId} />
+      {/* beside the leaderboard because that is where the wish comes from:
+          you read the names, and you want one of them to be someone you know */}
+      {!teaching && <InviteButton className="inArena" />}
       {/* the controls are taught on the start screen and, once per browser, by
           the first-descent coach — the arena itself stays unlettered */}
       {teaching && <Tutorial state={tutorial} selfId={selfId} />}

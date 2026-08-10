@@ -64,7 +64,11 @@ const CFG = {
   toggleCooldown: 0.2,
   maxEventsPerTick: 256,
   maxBufferedBytes: 256 * 1024,
-  maxNameLen: 15,
+  // 20 rather than 15 because names now arrive from portal accounts as well as
+  // from our own start screen, and a portal username runs to 20 characters.
+  // Truncating one produces a stranger on the leaderboard, which defeats the
+  // only reason to carry the name across: that a player's friends recognise it.
+  maxNameLen: 20,
   maxStrikes: 10,
 };
 
@@ -142,6 +146,9 @@ const profanity = new RegExpMatcher({
     Profane names are not censored into fragments -- they fall back whole. */
 export function sanitizeName(raw: string | null): string {
   const cleaned = String(raw ?? "")
+    // The control characters are the point: this is the class being stripped,
+    // so the rule that objects to naming them has nothing to warn about here.
+    // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/g, "")
     .replace(/\s+/g, " ")
     .trim()
@@ -156,6 +163,20 @@ export function sanitizeName(raw: string | null): string {
 const TAU = Math.PI * 2;
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b : v);
+
+/** Distance between two world points.
+
+    Math.hypot is overflow-safe, and pays for it: it rescales its arguments
+    before squaring them, which costs roughly an order of magnitude. Nothing in
+    a 2600-unit arena is within astronomical distance of overflowing a double,
+    and this is called O(n²) times per tick by the contact law and again by the
+    perception broadcast — so the plain form is the right one here. Math.hypot
+    stays where it reads a direction vector the client sent, which is rare and
+    unbounded. */
+const dist = (ax: number, ay: number, bx: number, by: number): number => {
+  const dx = ax - bx, dy = ay - by;
+  return Math.sqrt(dx * dx + dy * dy);
+};
 
 let nextId = 1;
 
@@ -632,7 +653,10 @@ export class Room {
   private updateBots(dt: number): void {
     if (this.botPopTarget <= 0) return;
     let humans = 0, bots = 0;
-    for (const p of this.players.values()) p.socket ? humans++ : bots++;
+    for (const p of this.players.values()) {
+      if (p.socket) humans++;
+      else bots++;
+    }
 
     this.botAdjustT -= dt;
     if (this.botAdjustT <= 0) {
@@ -682,7 +706,7 @@ export class Room {
       let nearest = Infinity;
       for (const h of this.players.values()) {
         if (!h.socket || h.dead) continue;
-        nearest = Math.min(nearest, Math.hypot(h.x - p.x, h.y - p.y));
+        nearest = Math.min(nearest, dist(h.x, h.y, p.x, p.y));
       }
       if (nearest > bestD) { bestD = nearest; pick = p; }
     }
@@ -709,12 +733,12 @@ export class Room {
     let prey: Player | null = null, preyD = Infinity;
     for (const o of this.players.values()) {
       if (o.id === p.id || o.dead) continue;
-      const mode = this.perceiveMode(p, o, vision);
+      const d = dist(o.x, o.y, p.x, p.y);
+      const mode = this.perceiveMode(o, vision, d);
       // a wake says something is moving, never how big it is — so a bot may
       // not weigh a shimmer contact as threat or prey either. Symmetry with
       // what a human client now receives is the point (§6)
       if (mode === P_NONE || mode === P_SHIMMER) continue;
-      const d = Math.hypot(o.x - p.x, o.y - p.y);
       if (o.light > p.light * 1.25) {
         if (d < threatD) { threat = o; threatD = d; }
       } else if (p.light > o.light * 1.25 && this.now >= o.protectedUntil &&
@@ -774,7 +798,7 @@ export class Room {
       return;
     }
     // nothing visible: wander toward the waypoint, re-rolling when reached
-    if (Math.hypot(brain.waypointX - p.x, brain.waypointY - p.y) < 80) {
+    if (dist(brain.waypointX, brain.waypointY, p.x, p.y) < 80) {
       brain.waypointX = rand(150, CFG.arena - 150);
       brain.waypointY = rand(150, CFG.arena - 150);
     }
@@ -828,7 +852,7 @@ export class Room {
       for (const m of this.motes.values()) {
         const dx = p.x - m.x, dy = p.y - m.y;
         if (Math.abs(dx) > pullR || Math.abs(dy) > pullR) continue;
-        const d = Math.hypot(dx, dy);
+        const d = Math.sqrt(dx * dx + dy * dy);
         if (d < eatR) {
           p.light += 1;
           p.peak = Math.max(p.peak, p.light);
@@ -854,7 +878,7 @@ export class Room {
         const rr = pullR + Math.sqrt(m.value) * 2;
         const dx = p.x - m.x, dy = p.y - m.y;
         if (Math.abs(dx) > rr || Math.abs(dy) > rr) continue;
-        const d = Math.hypot(dx, dy);
+        const d = Math.sqrt(dx * dx + dy * dy);
         if (d < eatR + Math.sqrt(m.value) * 2) {
           p.light += m.value;
           p.peak = Math.max(p.peak, p.light);
@@ -930,7 +954,7 @@ export class Room {
         const b = alive[j]!;
         if (b.dead || a.dead) continue;
         const ra = bodyR(a.light), rb = bodyR(b.light);
-        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        const d = dist(a.x, a.y, b.x, b.y);
         if (d >= ra + rb) continue;
         this.resolveContact(a, b);
         // soft separation
@@ -958,21 +982,23 @@ export class Room {
      shimmer — nothing else ever crosses the wire. The three ways of being
      perceived are not equally revealing, so they do not produce equal
      payloads; see PerceiveMode and the fidelity helpers at the top. */
-  private perceiveMode(viewer: Player, o: Player, vision: number): PerceiveMode {
-    const d = Math.hypot(o.x - viewer.x, o.y - viewer.y);
+  /* Both of these take the viewer-to-target distance rather than computing it,
+     because every caller needs that number for something else as well and this
+     is the hottest arithmetic on the server: once per viewer, per body, per
+     tick. Computing it twice was 300k redundant square roots a second at room
+     scale. */
+  private perceiveMode(o: Player, vision: number, d: number): PerceiveMode {
     if (d <= vision + bodyR(o.light)) return P_FULL;                  // in my vision
     // a burning or freshly revealed lantern that reaches me is simply seen;
     // a dark one is only the smudge its irreducible glow cannot hide
     if (d <= glowRadius(o)) return o.lit || o.revealT > 0 ? P_FULL : P_GLOW;
-    return !o.lit && o.speed > CFG.shimmerMinSpeed && d <= shimmerRadius(o)
-      ? P_SHIMMER : P_NONE;
+    return this.shimmers(o, d) ? P_SHIMMER : P_NONE;
   }
 
   /** Whether o's wake registers for this viewer at all, independent of how
       much else the viewer knows about it. */
-  private shimmers(viewer: Player, o: Player): boolean {
-    return !o.lit && o.speed > CFG.shimmerMinSpeed &&
-      Math.hypot(o.x - viewer.x, o.y - viewer.y) <= shimmerRadius(o);
+  private shimmers(o: Player, d: number): boolean {
+    return !o.lit && o.speed > CFG.shimmerMinSpeed && d <= shimmerRadius(o);
   }
 
   private broadcast(): void {
@@ -987,7 +1013,9 @@ export class Room {
       const shimmering = new Set<number>();
       for (const o of this.players.values()) {
         if (o.dead) continue;
-        const mode = o.id === p.id ? P_FULL : this.perceiveMode(p, o, vision);
+        const self = o.id === p.id;
+        const d = self ? 0 : dist(o.x, o.y, p.x, p.y);
+        const mode = self ? P_FULL : this.perceiveMode(o, vision, d);
         if (mode === P_NONE) continue;
 
         /* Wake rings are emitted here, at the cadence, rather than derived on
@@ -996,7 +1024,7 @@ export class Room {
            client can already see anyway (including its own, so you can still
            read how loud your own sneaking is); otherwise it is grid-snapped,
            so 25 snapshots a second still resolve to one cell. */
-        if (this.shimmers(p, o)) {
+        if (this.shimmers(o, d)) {
           shimmering.add(o.id);
           const step = SHIMMER_STEPS[shimmerStep(o.speed)]!;
           const c = (p.shimmerClocks.get(o.id) ?? 0) - dt;
@@ -1058,7 +1086,7 @@ export class Room {
 
       const effects = [...wakes];
       for (const e of this.events) {
-        const d = Math.hypot(e.x - p.x, e.y - p.y);
+        const d = dist(e.x, e.y, p.x, p.y);
         const reach =
           e.kind === EffectKind.BURN || e.kind === EffectKind.SNUFF
             ? CFG.flareVisibility                          // flares pierce the darkness (§5)

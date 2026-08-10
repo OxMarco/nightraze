@@ -22,12 +22,24 @@
    guarded individually and storage falls back to localStorage: a game that is
    merely unmonetized is fine, a game that is dead is not. */
 
-import type { Platform, PlatformStorage } from "./types.js";
+import type {
+  Platform,
+  PlatformAccount,
+  PlatformConstraints,
+  PlatformIdentity,
+  PlatformSession,
+  PlatformStorage,
+} from "./types.js";
 import { webStorage } from "./web.js";
 
 interface CrazyGamesData {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
+}
+
+interface CrazyGamesSettings {
+  readonly disableChat?: boolean;
+  readonly muteAudio?: boolean;
 }
 
 interface CrazyGamesGame {
@@ -36,6 +48,40 @@ interface CrazyGamesGame {
   gameplayStart(): void;
   gameplayStop(): void;
   happytime(): void;
+
+  /* Multiplayer. updateRoom is how the portal learns there is something to
+     join; leftRoom retracts it. inviteLink mints the URL the friend follows,
+     inviteParams is what we were opened with when we are the friend, and the
+     join listener is the same arrival happening to a tab that is already
+     playing. */
+  updateRoom(room: {
+    roomId: string;
+    isJoinable: boolean;
+    inviteParams?: Record<string, string>;
+  }): void;
+  leftRoom(): void;
+  inviteLink(params: Record<string, string>): string;
+  readonly inviteParams: Record<string, string> | null;
+  addJoinRoomListener(listener: (params: Record<string, string>) => void): void;
+  removeJoinRoomListener(listener: (params: Record<string, string>) => void): void;
+  readonly isInstantMultiplayer: boolean;
+
+  readonly settings: CrazyGamesSettings;
+  addSettingsChangeListener(listener: (settings: CrazyGamesSettings) => void): void;
+  removeSettingsChangeListener(listener: (settings: CrazyGamesSettings) => void): void;
+}
+
+interface CrazyGamesUser {
+  readonly username: string;
+  readonly profilePictureUrl?: string;
+}
+
+interface CrazyGamesUserModule {
+  readonly isUserAccountAvailable: boolean;
+  getUser(): Promise<CrazyGamesUser | null>;
+  showAuthPrompt(): Promise<CrazyGamesUser | null>;
+  addAuthListener(listener: (user: CrazyGamesUser | null) => void): void;
+  removeAuthListener(listener: (user: CrazyGamesUser | null) => void): void;
 }
 
 interface CrazyGamesSdk {
@@ -43,6 +89,7 @@ interface CrazyGamesSdk {
   readonly environment: string;
   readonly data: CrazyGamesData;
   readonly game: CrazyGamesGame;
+  readonly user: CrazyGamesUserModule;
 }
 
 declare global {
@@ -64,6 +111,46 @@ function attempt(what: string, fn: (api: CrazyGamesSdk) => void): void {
   } catch (err) {
     console.warn(`[platform] CrazyGames ${what} failed`, err);
   }
+}
+
+/** Read a value out of the SDK, falling back when it is absent or throwing.
+    Every property below is a getter that can throw in fail mode, so none of
+    them may be touched outside this. */
+function read<T>(what: string, fn: (api: CrazyGamesSdk) => T, fallback: T): T {
+  const api = sdk();
+  if (!api) return fallback;
+  try {
+    const value = fn(api);
+    return value === undefined || value === null ? fallback : value;
+  } catch (err) {
+    console.warn(`[platform] CrazyGames ${what} failed`, err);
+    return fallback;
+  }
+}
+
+/** Subscribe/unsubscribe pairs, guarded on both ends so a failed add never
+    leaves a remove to throw at cleanup time. */
+function subscribe<L>(
+  what: string,
+  add: (api: CrazyGamesSdk, listener: L) => void,
+  remove: (api: CrazyGamesSdk, listener: L) => void,
+  listener: L,
+): () => void {
+  let attached = false;
+  attempt(`${what} subscribe`, (api) => {
+    add(api, listener);
+    attached = true;
+  });
+  return () => {
+    if (!attached) return;
+    attached = false;
+    attempt(`${what} unsubscribe`, (api) => remove(api, listener));
+  };
+}
+
+function toIdentity(user: CrazyGamesUser | null | undefined): PlatformIdentity | null {
+  if (!user?.username) return null;
+  return { name: user.username, avatarUrl: user.profilePictureUrl };
 }
 
 /* The data module is the reason storage goes through the platform at all.
@@ -99,6 +186,94 @@ const crazyGamesStorage: PlatformStorage = {
   },
 };
 
+/* The signed-in player, resolved once during ready() and kept current by the
+   SDK's auth listener.
+
+   getUser() is a promise, and the arena reads the player's name synchronously
+   while it renders its first frame — the same reason main-embed.tsx waits for
+   ready() before it renders at all. So the await happens there, once, and
+   every later read is of this. A player who signs in mid-session arrives
+   through the listener rather than a second await. */
+let identity: PlatformIdentity | null = null;
+
+const crazyGamesAccount: PlatformAccount = {
+  supported: () => read("isUserAccountAvailable", (api) => api.user.isUserAccountAvailable, false),
+
+  current: () => identity,
+
+  async signIn() {
+    const api = sdk();
+    if (!api) return null;
+    try {
+      const user = await api.user.showAuthPrompt();
+      identity = toIdentity(user);
+      return identity;
+    } catch (err) {
+      // userCancelled is the ordinary outcome of showing a login box, and
+      // userAlreadySignedIn means we asked a question already answered.
+      // Neither is a failure worth propagating into the arena.
+      console.info("[platform] CrazyGames sign-in not completed", err);
+      return identity;
+    }
+  },
+
+  onChange(listener) {
+    const wrapped = (user: CrazyGamesUser | null) => {
+      identity = toIdentity(user);
+      listener(identity);
+    };
+    return subscribe(
+      "authListener",
+      (api, l) => api.user.addAuthListener(l),
+      (api, l) => api.user.removeAuthListener(l),
+      wrapped,
+    );
+  },
+};
+
+/* Where the player is, told to the portal so their friends can follow.
+
+   nightraze has one arena rather than lobbies, so the session id is constant
+   and joinability is the only part that moves: the arena bounces at capacity
+   (close 1013), and a portal that advertises a full arena as joinable sends
+   friends into that bounce. game/session.ts owns working out which it is. */
+const crazyGamesSession: PlatformSession = {
+  enter: (state) =>
+    attempt("updateRoom", (api) =>
+      api.game.updateRoom({
+        roomId: state.id,
+        isJoinable: state.joinable,
+        inviteParams: state.params,
+      }),
+    ),
+
+  leave: () => attempt("leftRoom", (api) => api.game.leftRoom()),
+
+  link: (params) => read("inviteLink", (api) => api.game.inviteLink(params), null),
+
+  launchParams: () => read("inviteParams", (api) => api.game.inviteParams, null),
+
+  onJoinRequest: (listener) =>
+    subscribe(
+      "joinRoomListener",
+      (api, l) => api.game.addJoinRoomListener(l),
+      (api, l) => api.game.removeJoinRoomListener(l),
+      listener,
+    ),
+
+  wantsInstantPlay: () => read("isInstantMultiplayer", (api) => api.game.isInstantMultiplayer, false),
+};
+
+const UNCONSTRAINED: PlatformConstraints = { chatDisabled: false, audioMuted: false };
+
+function toConstraints(settings: CrazyGamesSettings | null): PlatformConstraints {
+  if (!settings) return UNCONSTRAINED;
+  return {
+    chatDisabled: settings.disableChat === true,
+    audioMuted: settings.muteAudio === true,
+  };
+}
+
 export const crazyGamesPlatform: Platform = {
   name: "crazygames",
 
@@ -117,9 +292,36 @@ export const crazyGamesPlatform: Platform = {
       // say so and open the arena anyway.
       console.warn("[platform] CrazyGames SDK init failed", err);
     }
+
+    // Whoever the portal already has signed in, resolved before the first
+    // render so the arena can put their name on the lantern (see `identity`).
+    // A guest, a disabled environment and a rejected init are the same answer
+    // here — nobody — and all three are fine.
+    try {
+      if (api.user.isUserAccountAvailable) {
+        identity = toIdentity(await api.user.getUser());
+      }
+    } catch (err) {
+      console.warn("[platform] CrazyGames getUser failed", err);
+    }
   },
 
   storage: crazyGamesStorage,
+
+  account: crazyGamesAccount,
+  session: crazyGamesSession,
+
+  constraints: () => toConstraints(read("settings", (api) => api.game.settings, null)),
+
+  onConstraintsChange(listener) {
+    const wrapped = (settings: CrazyGamesSettings) => listener(toConstraints(settings));
+    return subscribe(
+      "settingsChangeListener",
+      (api, l) => api.game.addSettingsChangeListener(l),
+      (api, l) => api.game.removeSettingsChangeListener(l),
+      wrapped,
+    );
+  },
 
   loadingStart: () => attempt("loadingStart", (api) => api.game.loadingStart()),
   loadingStop: () => attempt("loadingStop", (api) => api.game.loadingStop()),

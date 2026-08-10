@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Privacy · nightraze.io</title>
+    <meta name="description" content="What nightraze.io stores, why, and for how long." />
+    <!-- Kept out of search results. This page exists to be found by the person
+         already on nightraze.io who wants it, and to be cited in a portal
+         submission form — not to compete with the game for the site's own
+         results. The canonical below still stands: it is the one address for
+         this document wherever it is linked from. -->
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="canonical" href="https://nightraze.io/privacy" />
+    <meta name="theme-color" content="#010b10" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="stylesheet" href="/fonts/fonts.css" />
+
+    <!-- Deliberately a static document with its own styles rather than a route
+         in the app: a policy that only renders once a 300kB bundle has booted is
+         a policy that fails exactly when someone is trying to read it, and portal
+         reviewers open it cold. It must also stay readable if the game is down. -->
+    <style>
+      :root {
+        --ink: #010b10;
+        --glow: #5affdc;
+        --glow-hot: #d8fff2;
+        --slate: #a8c8c0;
+        --slate-dim: rgba(150, 185, 190, 0.55);
+        --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: clamp(28px, 6vw, 72px) clamp(20px, 6vw, 48px) 96px;
+        background: var(--ink);
+        color: var(--slate);
+        font-family: "Avenir Next", "Segoe UI", system-ui, sans-serif;
+        font-weight: 300;
+        line-height: 1.7;
+        font-size: 1rem;
+        -webkit-text-size-adjust: 100%;
+      }
+      main { max-width: 68ch; margin: 0 auto; }
+      a { color: var(--glow); text-decoration-color: rgba(90, 255, 220, 0.4); }
+      a:hover { color: var(--glow-hot); }
+      .kicker {
+        font-family: var(--mono);
+        font-size: 0.6875rem;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        color: rgba(90, 255, 220, 0.5);
+      }
+      h1 {
+        font-family: Marcellus, Georgia, serif;
+        font-weight: 400;
+        font-size: clamp(1.9rem, 6vw, 2.6rem);
+        line-height: 1.15;
+        margin: 10px 0 6px;
+        color: var(--glow-hot);
+      }
+      h2 {
+        font-family: Marcellus, Georgia, serif;
+        font-weight: 400;
+        font-size: 1.2rem;
+        margin: 40px 0 8px;
+        color: var(--glow);
+      }
+      .updated {
+        font-family: var(--mono);
+        font-size: 0.6875rem;
+        letter-spacing: 0.14em;
+        color: var(--slate-dim);
+      }
+      .lede { font-size: 1.0625rem; color: var(--glow-hot); margin-top: 26px; }
+      ul { padding-left: 1.1em; }
+      li { margin: 7px 0; }
+      code {
+        font-family: var(--mono);
+        font-size: 0.85em;
+        color: var(--glow-hot);
+        background: rgba(90, 255, 220, 0.08);
+        padding: 1px 5px;
+        border-radius: 3px;
+      }
+      /* The obfuscated address is not a mailto: on purpose — a live link is
+         exactly what a scraper harvests, and the whole point of writing it this
+         way is that it cannot be clicked straight into a spam list. Monospaced
+         so the _AT_ and _DOT_ read as literal text to be edited, not as prose. */
+      .mail {
+        font-family: var(--mono);
+        font-size: 0.9em;
+        color: var(--glow-hot);
+        white-space: nowrap;
+      }
+      .foot {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 28px;
+        justify-content: space-between;
+        margin-top: 30px;
+        font-family: var(--mono);
+        font-size: 0.6875rem;
+        letter-spacing: 0.14em;
+        color: var(--slate-dim);
+      }
+      .back { text-transform: lowercase; }
+      hr { border: 0; border-top: 1px solid rgba(90, 255, 220, 0.14); margin: 44px 0 0; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="kicker">nightraze.io</div>
+      <h1>Privacy</h1>
+      <p class="updated">Last updated 8 August 2026</p>
+
+      <p class="lede">
+        nightraze does not ask who you are. There is no account, no email, no password and no
+        payment. You type a name, you play, and the game keeps the little it needs to run an
+        arena, stop cheating, and know whether anyone is out there.
+      </p>
+
+      <h2>Who is responsible</h2>
+      <p>
+        nightraze.io is operated by <strong>Impossible Labs Ltd.</strong>, a company based in
+        Gibraltar, which is the data controller for everything described below. You can reach us at
+        <span class="mail">info_AT_impossiblelabs_DOT_xyz</span> — written that way to keep the
+        address out of the hands of scrapers; replace <code>_AT_</code> with @ and
+        <code>_DOT_</code> with a dot.
+      </p>
+
+      <h2>What stays in your browser</h2>
+      <p>
+        The game stores a few values on your own device. These are not cookies and are not sent
+        anywhere except where noted below.
+      </p>
+      <ul>
+        <li>The name you last played under, so you do not retype it.</li>
+        <li>Your personal best light, so the start screen can show what you are playing against.</li>
+        <li>Your touch control preference, and whether you have seen the tutorial.</li>
+        <li>
+          A random identifier (<code>nightraze.visitor.v1</code>) generated on your device. It is a
+          random value, not derived from you or your hardware, and exists so we can count returning
+          players without knowing who they are.
+        </li>
+      </ul>
+      <p>
+        Clearing your browser's site data for nightraze.io erases all of it, including the random
+        identifier. A new one is generated the next time you play, and the old one cannot be
+        reconnected to it.
+      </p>
+
+      <h2>What the server records</h2>
+      <ul>
+        <li>
+          <strong>A hashed identifier.</strong> The random identifier above is sent when you
+          connect, and the server stores only a SHA-256 hash of it. The raw value is never written
+          to disk.
+        </li>
+        <li>
+          <strong>A coarse location.</strong> Either a two-letter country code from our hosting
+          provider, or your browser's time zone (for example <code>Europe/Rome</code>). Never a
+          precise location.
+        </li>
+        <li>
+          <strong>Session and connection quality.</strong> When a session started and ended, and
+          round-trip latency samples, so we can tell whether the arena is playable in your region.
+        </li>
+        <li>
+          <strong>Crash events.</strong> The hashed identifier plus a short category such as
+          <code>window-error</code>. No stack traces, no page contents, no personal data.
+        </li>
+      </ul>
+      <p>These records are deleted after 90 days.</p>
+
+      <h2>IP addresses and anti-cheat</h2>
+      <p>
+        Your IP address is used while you are connected to limit how many simultaneous connections
+        one source may open. It is not logged as analytics and is not stored for ordinary play.
+      </p>
+      <p>
+        It is stored in one case only: if the server's anti-cheat suspends a connection, the IP is
+        written down with the suspension so a repeat offence lengthens the next one. Suspensions
+        last up to seven days, and the record is deleted 30 days after the most recent one.
+      </p>
+
+      <h2>Your player name is public</h2>
+      <p>
+        The name you choose is shown to everyone in the arena and on the leaderboard. Do not use
+        your real name or anything you would not put in front of strangers. Names are filtered for
+        profanity and fall back to a default when rejected.
+      </p>
+
+      <h2>Playing on CrazyGames and other portals</h2>
+      <p>
+        nightraze is listed on game portals, which embed the game in their own page. When you play
+        through one:
+      </p>
+      <ul>
+        <li>
+          The portal's own privacy policy governs everything the portal does, including any
+          advertising and any account you hold with them. That is between you and them.
+        </li>
+        <li>
+          If you are signed in to the portal, the game asks it for your username and avatar so your
+          friends can recognise you on the leaderboard. We do not receive your email address or
+          password, and we do not store the username on our servers beyond the ordinary session
+          records above.
+        </li>
+        <li>
+          The values listed under "what stays in your browser" are kept through the portal's storage
+          rather than ours, which is what lets your name and best score follow you across their
+          regional sites.
+        </li>
+      </ul>
+
+      <h2>What we do not do</h2>
+      <ul>
+        <li>No cookies.</li>
+        <li>No third-party analytics or trackers.</li>
+        <li>No advertising network of our own, and no data sold or shared for advertising.</li>
+        <li>No profiling, and no attempt to identify you across sites.</li>
+      </ul>
+
+      <h2>Children</h2>
+      <p>
+        nightraze is suitable for a general audience and is not directed at children under 13. We do
+        not knowingly collect personal information from them. Because there are no accounts, there
+        is nothing for a child to sign up for.
+      </p>
+
+      <h2>Your choices and your rights</h2>
+      <p>
+        Clearing your browser's site data removes everything stored on your device and severs any
+        link to the hashed records on the server, which then expire on the schedule above. That is
+        the fastest and most complete option available to you, and it needs no one's permission.
+      </p>
+      <p>
+        Under Gibraltar data protection law, and under the GDPR where it applies to you, you have
+        rights to access, correct, erase, and restrict the processing of personal data about you,
+        and to object to it. You can exercise them by writing to the address above.
+      </p>
+      <p>
+        One honest limitation. We store a hash of a random identifier and never the identifier
+        itself, so given only your name or email we cannot find the rows that belong to you — there
+        is nothing in them that points back to a person. That is a consequence of collecting as
+        little as we do, not an evasion, and it is why clearing site data is the more effective
+        route. If you still want us to try, we will need the raw identifier from your browser's
+        storage, and we will explain how to find it.
+      </p>
+      <p>
+        If you think we have handled your data badly, please tell us first — but you are entitled to
+        complain to the data protection supervisory authority in Gibraltar, or to the one where you
+        live.
+      </p>
+
+      <h2>Changes</h2>
+      <p>
+        If this policy changes materially, the date at the top changes with it. There is no mailing
+        list to notify, by design.
+      </p>
+
+      <hr />
+      <p class="foot">
+        See also the <a href="/terms">terms of service</a>.
+        <a class="back" href="/">← back to the dark</a>
+      </p>
+    </main>
+  </body>
+</html>

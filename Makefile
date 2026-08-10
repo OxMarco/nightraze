@@ -1,12 +1,19 @@
 COMPOSE := docker compose -f docker-compose.prod.yml
 COMPOSE_DEV := docker compose -f docker-compose.local.yml
 
-.PHONY: help test test-docker dev dev-down dev-logs up down restart deploy rollback build smoke logs ps status health sh prune
+.PHONY: help lint lint-fix test test-docker dev dev-down dev-logs up down restart deploy rollback build smoke logs ps status health sh prune
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
-test: ## Build both apps and run deterministic unit + integration tests (needs a host Node)
+lint: ## Lint both workspaces (tooling lives at the repo root; see eslint.config.js)
+	npm run lint
+
+lint-fix: ## Lint both workspaces, applying the fixes ESLint can make itself
+	npm run lint:fix
+
+test: ## Lint, build both apps, and run deterministic unit + integration tests (needs a host Node)
+	npm run lint
 	cd client && npm test
 	cd server && npm run test:all
 

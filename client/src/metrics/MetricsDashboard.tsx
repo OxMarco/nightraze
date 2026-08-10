@@ -382,6 +382,12 @@ export function MetricsDashboard() {
 
   useEffect(() => {
     if (!token) return;
+    // load() flips the loading flag before it awaits, which is a setState in
+    // the effect body and normally a cascading-render smell. Here it is the
+    // point: unlocking the dashboard must show that something is happening
+    // before the first response lands, and there is no render-time source for
+    // "a fetch is in flight" to derive it from instead.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load(token);
     const timer = window.setInterval(() => { void load(token, true); }, REFRESH_MS);
     return () => window.clearInterval(timer);

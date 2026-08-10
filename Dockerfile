@@ -55,16 +55,50 @@ COPY server/tsconfig.json ./
 COPY server/src ./src
 RUN npm run build
 
+# ---- lint ----
+# Its own stage, and its own npm install, because the linter needs a TypeScript
+# the two build stages deliberately do not have (eslint.config.js explains why).
+# Nothing here is compiled: ESLint parses the sources, so neither workspace's
+# node_modules is needed and this stays a small, fast layer that only rebuilds
+# when the sources or the rules change.
+FROM node:24-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd AS lint
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY eslint.config.js ./
+COPY client/src ./client/src
+COPY client/test ./client/test
+COPY server/src ./server/src
+RUN npm run lint && touch /lint-passed
+
+# ---- client test ----
+# The platform suite, which is the only place the CrazyGames adapter's guards
+# are exercised at all — there is no way to open their frame locally — plus the
+# arrival rules, which mount the real hooks. It runs against the sources rather
+# than the bundle, and builds on client-build so `npm ci` and `tsc` are already
+# done and cached.
+FROM client-build AS client-test
+COPY client/tsconfig.test.json client/vitest.config.ts ./
+COPY client/test ./test
+RUN npm run test:unit && touch /client-tests-passed
+
 # ---- test ----
 # Deploys run the suite here instead of on the host: production has Docker but
-# no Node toolchain, so `npm` and `node` only exist inside these stages.
+# no Node toolchain, so `npm` and `node` only exist inside these stages. This
+# target is what `make test-docker` builds and what scripts/deploy.sh gates on,
+# so it must fail for every reason `make test` fails locally.
+#
 # Building on server-build reuses its `npm ci` (devDependencies included) and
-# `tsc` output, and pulling in the client bundle makes this target fail for
-# exactly the reasons `make test` does locally, where client/`npm test` *is*
-# its build. dist/server.js resolves ../public, so the integration test drives
-# the same static+API+WebSocket layout production serves.
+# `tsc` output. Pulling in the client bundle covers the client's build, and the
+# two stamp files drag lint and client-test into the graph so the rules and the
+# client's *tests* are covered too — without them BuildKit prunes those stages
+# as unreachable and the deploy gate silently stops checking. dist/server.js
+# resolves ../public, so the integration test drives the same static+API+
+# WebSocket layout production serves.
 FROM server-build AS test
 COPY --from=client-build /app/dist ./public
+COPY --from=lint /lint-passed /tmp/
+COPY --from=client-test /client-tests-passed /tmp/
 COPY server/test ./test
 COPY server/integration.test.mjs ./
 RUN node --test test/*.test.mjs && node integration.test.mjs

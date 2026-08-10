@@ -4,12 +4,14 @@
 **/dist
 **/*.test.mjs
 **/test
-# ...except the server suite, which the `test` stage runs during deploy. These
-# negations must stay below the patterns above; the last match wins, and the
-# runtime stage never copies them in.
+# ...except the suites the `test` and `client-test` stages run during deploy.
+# These negations must stay below the patterns above; the last match wins, and
+# the runtime stage never copies them in.
 !server/test
 !server/test/**
 !server/integration.test.mjs
+!client/test
+!client/test/**
 .git
 .github
 .claude

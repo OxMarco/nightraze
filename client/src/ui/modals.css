@@ -172,6 +172,42 @@
   border-bottom: 1px solid rgba(90, 255, 220, 0.35);
 }
 .nameInput::placeholder { color: var(--slate-dim); }
+
+/* ---- identity: the same line, but stated rather than asked for.
+
+   Deliberately sharing .nameInput's metrics — same width, same margin, same
+   glow — so that signing in changes what the line says and not where anything
+   sits. The missing underline is the whole difference: there is nothing to
+   type here. */
+.identity {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 220px;
+  margin: 24px auto 0;
+  padding: 9px 4px;
+}
+.identityFace {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  /* the avatar is a portrait from another site: ringed to belong to the
+     lantern palette rather than sitting on the dark as a bright rectangle */
+  border: 1px solid rgba(90, 255, 220, 0.35);
+  box-shadow: 0 0 14px rgba(90, 255, 220, 0.25);
+}
+.identityName {
+  font-weight: 300;
+  font-size: 0.9375rem;
+  letter-spacing: 0.08em;
+  color: var(--glow-hot);
+  /* a long portal username must not shove the avatar off the line */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .nameInput:focus {
   outline: none;
   border-bottom-color: rgba(90, 255, 220, 0.9);
@@ -218,6 +254,28 @@
 }
 .modalQuiet:hover { color: var(--slate); }
 .modalQuiet:focus-visible { outline: 2px solid var(--glow-hot); outline-offset: 4px; }
+
+/* ---- the standing notice: present, findable, and quiet.
+
+   The dimmest thing on the screen on purpose. It sits below the controls
+   because it is the last thing anyone needs and the first thing a reviewer
+   looks for, and it must never compete with "light the lantern". */
+.legalNote {
+  margin: 22px auto 0;
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  line-height: 1.6;
+  color: rgba(150, 185, 190, 0.38);
+}
+.legalNote a {
+  color: rgba(150, 185, 190, 0.6);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: rgba(90, 255, 220, 0.3);
+}
+.legalNote a:hover { color: var(--glow); }
+.legalNote a:focus-visible { outline: 2px solid var(--glow-hot); outline-offset: 3px; }
 
 /* ---- big number readout */
 .bigNum {

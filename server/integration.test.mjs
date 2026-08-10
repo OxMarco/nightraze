@@ -204,8 +204,33 @@ check("dash costs max(0.8, 2.5% of light)", fracDiff < 0.02,
 
 // Farm by steering at the nearest server-visible mote. This follows observed
 // state instead of hoping a random sweep crosses enough randomly placed motes.
+//
+// Budgeted in server ticks rather than in wall-clock steps, and that is the
+// whole point. The lantern moves per tick, so "250 sleeps of 100ms" is only
+// 25 seconds of farming on a machine keeping up with the tick rate — on a
+// contended one (a CI runner, a build box, a VPS mid-deploy running the game it
+// is about to replace) the same 25 seconds buys a fraction of the simulation
+// and the lantern never reaches a mote. That failed this check for a reason
+// that has nothing to do with eating, on the exact machine where a false
+// failure costs the most: deploy.sh gates on this suite.
+//
+// Asking the server how far it has actually advanced removes the race. The
+// wall-clock ceiling stays as a backstop so a genuinely stalled simulation
+// still ends the run rather than hanging it — and says which it was.
+const FARM_TICKS = 700;             // ~28s of simulation at 25Hz
+const FARM_WALL_MS = 180_000;       // backstop only; never reached when healthy
+const simTicks = async () => (await (await fetch(`${httpBase}/health`)).json()).simulation.ticks;
+
+const farmStartTicks = await simTicks();
+const farmStartedAt = Date.now();
 let farmSteps = 0;
-while (a.self().light < 20 && farmSteps < 250) {
+let farmTicks = 0;
+while (a.self().light < 20) {
+  // one health round-trip per second of wall-clock, not per step
+  if (farmSteps % 10 === 0) {
+    farmTicks = (await simTicks()) - farmStartTicks;
+    if (farmTicks >= FARM_TICKS || Date.now() - farmStartedAt > FARM_WALL_MS) break;
+  }
   const self = a.self();
   const motes = a.last()?.motes ?? [];
   let target = null, targetD = Infinity;
@@ -222,7 +247,8 @@ while (a.self().light < 20 && farmSteps < 250) {
   await sleep(100);
   farmSteps++;
 }
-check("eating grows light server-side", a.self().light >= 18, "L=" + a.self().light.toFixed(1));
+check("eating grows light server-side", a.self().light >= 18,
+  `L=${a.self().light.toFixed(1)} after ${farmTicks} ticks / ${Date.now() - farmStartedAt}ms`);
 
 // second client: perception isolation at spawn distance
 const b = makeClient("beta");

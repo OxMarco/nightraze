@@ -11,7 +11,9 @@
 import { platform } from "../platform/current.js";
 
 const NAME_KEY = "nightraze.name";
-const MAX_NAME = 15;   // matches the server's maxNameLen
+/** Matches the server's maxNameLen, and is wide enough for a portal username
+    (which runs to 20 characters) to survive intact. */
+export const MAX_NAME = 20;
 
 /** The last name the server accepted from this browser, or "" if none. */
 export function readName(): string {
