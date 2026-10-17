@@ -17,15 +17,13 @@
    It was first asked in the live arena, over a lantern whose two seconds of
    spawn protection ran out mid-keystroke, and the typist got eaten. The death
    screen is the one moment nobody can drain you, and "once more" was about to
-   reconnect anyway. Who actually sees this is narrow by design:
+   reconnect anyway. Who sees it:
 
      - a signed-in CrazyGames player never does. The portal already knows a
        name their friends recognise, and identity.ts prefers it over anything
        typed here.
-     - a returning browser never does. prefs.ts has the last name the server
-       accepted from it.
-     - a first-time guest does, after their first run under the default name,
-       and not again this session once they wave it away.
+     - every other guest does, on every death screen, pre-filled with the
+       name they last played under. "not now" hides it for that death only.
 
    Answering it reconnects, because the name is settled in the socket handshake
    (`?name=`) and there is no rename frame on the wire. On the death screen
@@ -38,25 +36,17 @@ import { useIdentity } from "../game/identity.js";
 import { MAX_NAME, proposeName, readName } from "../game/prefs.js";
 import "./nameOverlay.css";
 
-// Module scope so "not now" outlives the overlay, which remounts every death.
-let declined = false;
-
 export function NameOverlay() {
   const { player } = useIdentity();
-  // Read once, at mount: this asks whether the player arrived nameless, and a
-  // name confirmed later in this very run should not make the box vanish
-  // mid-keystroke.
-  const [arrivedNamed] = useState(() => readName() !== "");
-  const [name, setName] = useState("");
-  const [dismissed, setDismissed] = useState(declined);
+  // Offered before every run, pre-filled with the name this browser last had
+  // accepted, so keeping it is one tap and changing it is always possible.
+  const [name, setName] = useState(readName);
+  const [dismissed, setDismissed] = useState(false);
   const { connect } = useGameActions();
 
-  if (player || arrivedNamed || dismissed) return null;
+  if (player || dismissed) return null;
 
-  const dismiss = () => {
-    declined = true;
-    setDismissed(true);
-  };
+  const dismiss = () => setDismissed(true);
 
   const commit = () => {
     const typed = name.trim();
