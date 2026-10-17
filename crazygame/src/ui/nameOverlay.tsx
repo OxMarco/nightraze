@@ -22,6 +22,10 @@
      - a signed-in CrazyGames player never does. The portal already knows a
        name their friends recognise, and identity.ts prefers it over anything
        typed here.
+     - a phone or tablet never does. On iOS Safari, focusing a text field in
+       the portal's iframe raises the keyboard, the portal re-lays its page
+       and the game is replaced by its "Join game" screen. Touch guests play
+       as "ember".
      - every other guest does, on every death screen, pre-filled with the
        name they last played under. "not now" hides it for that death only.
 
@@ -31,6 +35,7 @@
    "once more" would have given, so the host sees an ordinary gameplayStart. */
 
 import { useState } from "react";
+import { useIsTouch } from "../game/controls.js";
 import { useGameActions } from "../game/hooks.js";
 import { useIdentity } from "../game/identity.js";
 import { MAX_NAME, proposeName, readName } from "../game/prefs.js";
@@ -38,13 +43,14 @@ import "./nameOverlay.css";
 
 export function NameOverlay() {
   const { player } = useIdentity();
+  const touch = useIsTouch();
   // Offered before every run, pre-filled with the name this browser last had
   // accepted, so keeping it is one tap and changing it is always possible.
   const [name, setName] = useState(readName);
   const [dismissed, setDismissed] = useState(false);
   const { connect } = useGameActions();
 
-  if (player || dismissed) return null;
+  if (player || touch || dismissed) return null;
 
   const dismiss = () => setDismissed(true);
 

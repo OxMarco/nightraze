@@ -41,7 +41,7 @@ never return more than this:
 | `src/App.tsx` | Imports `config` rather than deriving it. `Screens` joins on mount instead of showing `StartScreen`, falls back to `StartScreen` only for a connection that closed, and renders `<Descending />` through the handshake. `Arena` renders `<NameOverlay />` inside `<DeathOverlay>`, never over the live arena. |
 | `src/game/session.ts` | `useAutoJoin` joins unconditionally on mount. `followedInviteLink()` and `hostWantsInstantPlay()` are gone — they decided when to skip a screen that no longer stands in the way. |
 | `src/index.css` | Adds `.descending`. |
-| `src/ui/nameOverlay.*` | **Only here.** The start screen's name field, asked on every death screen, pre-filled. |
+| `src/ui/nameOverlay.*` | **Only here.** The start screen's name field, asked on every death screen, pre-filled; never on touch devices. |
 | `src/platform/crazygames.ts` | **Only here.** The SDK adapter. `client/` no longer carries one. |
 | `src/metrics/` | **Only in `client/`.** The dashboard is nightraze.io's own operational surface and has no business in a portal build. |
 
