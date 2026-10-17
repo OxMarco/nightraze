@@ -15,7 +15,7 @@ FROM node:24-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432
 WORKDIR /app
 COPY client/package.json client/package-lock.json ./
 RUN npm ci
-COPY client/tsconfig.json client/vite.config.ts client/index.html client/embed.html ./
+COPY client/tsconfig.json client/vite.config.ts client/index.html ./
 COPY client/public ./public
 COPY client/src ./src
 EXPOSE 5173
@@ -41,7 +41,7 @@ FROM node:24-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432
 WORKDIR /app
 COPY client/package.json client/package-lock.json ./
 RUN npm ci
-COPY client/tsconfig.json client/vite.config.ts client/index.html client/embed.html ./
+COPY client/tsconfig.json client/vite.config.ts client/index.html ./
 COPY client/public ./public
 COPY client/src ./src
 RUN npm run build

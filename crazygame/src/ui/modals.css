@@ -1,0 +1,385 @@
+/* Modal system — F · Ripple: chromeless, no panels; motion encodes the state.
+   Rings expand outward on welcome, collapse inward in red on death, and
+   freeze completely at capacity. Ultra-light lowercase type over the abyss. */
+:root {
+  --glow: #5affdc;
+  --glow-hot: #eafff8;
+  --danger: #ff3d68;
+  --danger-hot: #ffdbe4;
+  --slate: rgba(180, 208, 205, 0.75);
+  --slate-dim: rgba(150, 185, 190, 0.45);
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Named once because two boxes have to agree on them: the backdrop pads its
+     content by these, and the ripple field re-applies them so the rings center
+     on the same rectangle the type does. On a notched phone these are not
+     symmetric — top 47 vs bottom 34, and left != right in landscape — so a
+     field that ignored them sat visibly off-center from the core. */
+  --modal-pad-t: calc(env(safe-area-inset-top) + 24px);
+  --modal-pad-r: calc(env(safe-area-inset-right) + 16px);
+  --modal-pad-b: calc(env(safe-area-inset-bottom) + 24px);
+  --modal-pad-l: calc(env(safe-area-inset-left) + 16px);
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  /* Same iOS Safari quirk the HUD hits (see viewport.ts): `inset: 0` sizes this
+     to the layout viewport, so `align-items: center` centers the core on a box
+     that extends above the fold and the type sits half the URL-bar overhang too
+     high. Re-anchoring to the visible region centers it on what is on screen.
+     Over-constrained top/height/bottom drops `bottom`, which is the intent; both
+     values fall back to the inset box when the properties are unset. */
+  top: var(--vv-top, 0px);
+  height: var(--vv-height, auto);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  /* The backdrop must NOT be the scroll container. An absolutely positioned
+     child (.rippleField) is sized to the scrollport while the in-flow core is
+     centered in the scrollable content — so the moment the modal grew taller
+     than the viewport the rings and the type centered on different boxes, and
+     drifted further apart with every pixel scrolled. The core carries its own
+     overflow instead (see .modalCore). */
+  padding: var(--modal-pad-t) var(--modal-pad-r) var(--modal-pad-b) var(--modal-pad-l);
+  background: radial-gradient(ellipse at 50% 50%, #030d12, #010407 80%);
+}
+.modalBackdrop.seeThrough {
+  background: radial-gradient(ellipse at 50% 50%, rgba(3, 13, 18, 0.72), rgba(1, 4, 7, 0.94) 80%);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+/* ---- ripple rings: the direction of the motion is the message */
+.rippleField {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* inset:0 resolves to the backdrop's *padding* box, which skips the padding
+     the core is centered inside — so the field re-applies it and centers the
+     rings on the content box, concentric with the type at every inset. */
+  box-sizing: border-box;
+  padding: var(--modal-pad-t) var(--modal-pad-r) var(--modal-pad-b) var(--modal-pad-l);
+  display: grid;
+  place-items: center;
+}
+.ring {
+  /* all three rings share one grid cell and are centered by the grid, so the
+     centering no longer restates half the ring's size as a negative margin —
+     that pair silently broke centering whenever the size below changed */
+  grid-area: 1 / 1;
+  /* keeps the 1.6:1 ellipse but stops a 640px ring from being clipped on a
+     390px phone, where only the middle of the arc was ever visible */
+  width: min(640px, 88vw);
+  height: calc(min(640px, 88vw) / 1.6);
+  border: 1px solid rgba(90, 255, 220, 0.4);
+  border-radius: 50%;
+  animation: rippleOut 6s linear infinite;
+}
+@keyframes rippleOut {
+  from { transform: scale(0.12); opacity: 0; }
+  15% { opacity: 0.7; }
+  to { transform: scale(1.6); opacity: 0; }
+}
+.ring.in {
+  border-color: rgba(255, 61, 104, 0.35);
+  animation: rippleIn 6s linear infinite;
+}
+@keyframes rippleIn {
+  from { transform: scale(1.6); opacity: 0; }
+  25% { opacity: 0.55; }
+  to { transform: scale(0.1); opacity: 0; }
+}
+.ring.still {
+  animation: none;
+  border-color: rgba(90, 255, 220, 0.14);
+}
+
+/* ---- core: bare type, centered in the water */
+.modalCore {
+  position: relative;
+  z-index: 2;
+  max-width: 420px;
+  margin: auto;
+  /* the core scrolls, not the backdrop: short viewports (landscape phones)
+     still reach every control, but the rings behind stay pinned to the center
+     of the screen instead of sliding out from under the type */
+  max-height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  touch-action: pan-y;
+  /* room for the focus ring on the first and last controls, which a scroll
+     container would otherwise clip */
+  padding: 4px;
+  text-align: center;
+  animation: coreIn 0.6s ease-out both;
+}
+@keyframes coreIn {
+  from { opacity: 0; }
+}
+
+.kicker {
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: rgba(90, 255, 220, 0.5);
+  margin-bottom: 12px;
+}
+.kicker.bad { color: rgba(255, 61, 104, 0.6); }
+
+.modalTitle {
+  font-family: "Marcellus", "Avenir Next", Georgia, serif;
+  font-weight: 400; /* Marcellus ships a single weight */
+  font-size: clamp(2rem, 8vw, 2.625rem);
+  line-height: 1.15;
+  letter-spacing: 0.05em;
+  color: var(--glow-hot);
+  text-shadow: 0 0 40px rgba(90, 255, 220, 0.4);
+  text-wrap: balance;
+}
+.modalTitle.bad {
+  color: var(--danger-hot);
+  text-shadow: 0 0 36px rgba(255, 61, 104, 0.35);
+}
+
+.rules {
+  margin: 18px auto 0;
+  max-width: 38ch;
+  font-size: 0.84rem;
+  line-height: 2;
+  font-weight: 300;
+  color: var(--slate);
+}
+.rules b { color: var(--glow-hot); font-weight: 500; }
+
+/* ---- input: a single line in the water */
+.nameInput {
+  display: block;
+  width: 220px;
+  margin: 24px auto 0;
+  padding: 9px 4px;
+  text-align: center;
+  font-family: inherit;
+  font-weight: 300;
+  font-size: 0.9375rem;
+  letter-spacing: 0.08em;
+  color: var(--glow-hot);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid rgba(90, 255, 220, 0.35);
+}
+.nameInput::placeholder { color: var(--slate-dim); }
+
+/* ---- identity: the same line, but stated rather than asked for.
+
+   Deliberately sharing .nameInput's metrics — same width, same margin, same
+   glow — so that signing in changes what the line says and not where anything
+   sits. The missing underline is the whole difference: there is nothing to
+   type here. */
+.identity {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 220px;
+  margin: 24px auto 0;
+  padding: 9px 4px;
+}
+.identityFace {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  /* the avatar is a portrait from another site: ringed to belong to the
+     lantern palette rather than sitting on the dark as a bright rectangle */
+  border: 1px solid rgba(90, 255, 220, 0.35);
+  box-shadow: 0 0 14px rgba(90, 255, 220, 0.25);
+}
+.identityName {
+  font-weight: 300;
+  font-size: 0.9375rem;
+  letter-spacing: 0.08em;
+  color: var(--glow-hot);
+  /* a long portal username must not shove the avatar off the line */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nameInput:focus {
+  outline: none;
+  border-bottom-color: rgba(90, 255, 220, 0.9);
+}
+
+/* ---- actions: glowing letterspaced text, no chrome */
+.modalAction {
+  display: inline-block;
+  margin-top: 26px;
+  padding: 4px 2px;
+  font-family: inherit;
+  font-weight: 400;
+  font-size: 0.9375rem;
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
+  text-transform: lowercase;
+  color: var(--glow);
+  text-shadow: 0 0 18px rgba(90, 255, 220, 0.5);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  transition: text-shadow 0.2s;
+}
+.modalAction:hover:not(:disabled) { text-shadow: 0 0 28px rgba(90, 255, 220, 0.9); }
+.modalAction:disabled { color: var(--slate-dim); text-shadow: none; cursor: default; }
+.modalAction:focus-visible { outline: 2px solid var(--glow-hot); outline-offset: 4px; }
+.modalAction.bad {
+  color: #ff92ad;
+  text-shadow: 0 0 18px rgba(255, 61, 104, 0.45);
+}
+.modalAction.bad:hover:not(:disabled) { text-shadow: 0 0 28px rgba(255, 61, 104, 0.8); }
+
+.modalQuiet {
+  display: block;
+  margin: 16px auto 0;
+  font-family: inherit;
+  font-size: 0.6875rem;
+  letter-spacing: 0.22em;
+  text-transform: lowercase;
+  color: var(--slate-dim);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.modalQuiet:hover { color: var(--slate); }
+.modalQuiet:focus-visible { outline: 2px solid var(--glow-hot); outline-offset: 4px; }
+
+/* ---- the standing notice: present, findable, and quiet.
+
+   The dimmest thing on the screen on purpose. It sits below the controls
+   because it is the last thing anyone needs and the first thing a reviewer
+   looks for, and it must never compete with "light the lantern". */
+.legalNote {
+  margin: 22px auto 0;
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  line-height: 1.6;
+  color: rgba(150, 185, 190, 0.38);
+}
+.legalNote a {
+  color: rgba(150, 185, 190, 0.6);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: rgba(90, 255, 220, 0.3);
+}
+.legalNote a:hover { color: var(--glow); }
+.legalNote a:focus-visible { outline: 2px solid var(--glow-hot); outline-offset: 3px; }
+
+/* ---- big number readout */
+.bigNum {
+  margin-top: 22px;
+  font-weight: 200;
+  font-size: clamp(2.5rem, 10vw, 3.5rem);
+  line-height: 1;
+  color: var(--glow-hot);
+  font-variant-numeric: tabular-nums;
+}
+/* a record run reads as light rather than loss — the one warm thing on a
+   screen that is otherwise the dark closing over you */
+.bigNum.crowned {
+  color: var(--glow);
+  text-shadow: 0 0 26px rgba(90, 255, 220, 0.45);
+}
+.numLbl {
+  margin-top: 6px;
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--slate-dim);
+}
+.numLbl.dim { opacity: 0.6; }
+
+.modalErr {
+  margin-top: 16px;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--danger);
+}
+
+/* ---- controls, sunk beneath the core */
+.modalControls {
+  margin-top: 34px;
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+  line-height: 2.2;
+  color: rgba(150, 185, 190, 0.4);
+}
+.modalControls span { display: block; }
+/* one set of instructions per device: keyboard bindings on fine pointers,
+   touch gestures on coarse ones */
+.modalControls .touch { display: none; }
+@media (pointer: coarse) {
+  .modalControls .keys { display: none; }
+  .modalControls .touch { display: block; }
+}
+.modalControls kbd {
+  font-family: inherit;
+  font-size: inherit;
+  color: rgba(90, 255, 220, 0.55);
+}
+
+/* ---- touch scheme, offered and never imposed (§9) */
+.schemePick {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+}
+.schemeLbl {
+  color: rgba(150, 185, 190, 0.32);
+  text-transform: uppercase;
+}
+.schemeOpt {
+  padding: 3px 2px;
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  color: rgba(150, 185, 190, 0.4);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  cursor: pointer;
+}
+.schemeOpt.on {
+  color: var(--glow);
+  border-bottom-color: rgba(90, 255, 220, 0.5);
+}
+.schemeOpt:focus-visible { outline: 2px solid var(--glow-hot); outline-offset: 3px; }
+
+/* ---- short viewports (landscape phones): tighten the vertical rhythm */
+@media (max-height: 520px) {
+  .modalTitle { font-size: 1.75rem; }
+  .bigNum { font-size: 2.25rem; margin-top: 12px; }
+  .rules { margin-top: 10px; line-height: 1.6; }
+  .nameInput { margin-top: 14px; }
+  .modalAction { margin-top: 16px; }
+  .modalControls { margin-top: 16px; line-height: 1.8; }
+}
+
+/* Rings freeze into the "still" arrangement; state is still legible from color. */
+@media (prefers-reduced-motion: reduce) {
+  .ring { animation: none; opacity: 0.3; }
+  .ring:nth-child(1) { transform: scale(0.45); }
+  .ring:nth-child(2) { transform: scale(0.8); }
+  .ring:nth-child(3) { transform: scale(1.15); }
+  .modalCore { animation: none; }
+}

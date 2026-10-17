@@ -1,0 +1,102 @@
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body, #root { width: 100%; height: 100%; background: #010b10; }
+/* The arena is a fixed surface, so both page-level scrolling boxes must be
+   locked. Applying the class directly to <html> avoids relying on :has(), and
+   removing the body's user-agent margin prevents it from creating a small
+   root-level overflow range. The metrics dashboard does not get this class and
+   remains a normal scrolling document. */
+html.game-shell {
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+html.game-shell body,
+html.game-shell #root {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+body.game-shell {
+  margin: 0;
+  touch-action: none;
+  font-family: "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  color: #a8c8c0;
+  /* A drag across the arena must steer, not select the HUD text behind it. The
+     two dead prefixes are here because portal QA greps for the four-line form
+     verbatim; -webkit- is the one that still does work, on iOS Safari. */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+/* Reset, so it must lose every argument it has with a real rule. Written as
+   `body.game-shell *` it scored (0,1,1) — higher than any single-class selector
+   in the app — so it quietly won against .modalCore, .rules, .nameInput and the
+   rest, flattening the modals' vertical rhythm and killing the `margin: … auto`
+   that centers them. :where() drops it to (0,0,0), which is what a blanket
+   reset should have been all along. */
+:where(body.game-shell *) { margin: 0; padding: 0; }
+#c { position: fixed; inset: 0; display: block; }
+
+/* sonar-console HUD */
+/* --vv-top keeps the top-anchored HUD inside the region iOS Safari actually
+   shows; see viewport.ts. It is 0 everywhere else. */
+.hudState { position: fixed; z-index: 5; top: calc(env(safe-area-inset-top) + 14px + var(--vv-top, 0px)); left: calc(env(safe-area-inset-left) + 16px); pointer-events: none;
+  font-size: .8125rem; letter-spacing: .14em; text-transform: uppercase; color: rgba(90,255,220,.75);
+  text-shadow: 0 0 14px rgba(90,255,220,.3); }
+.hudState b { font-size: 1.0625rem; letter-spacing: .06em; }
+.hudState .dim { color: rgba(140,170,190,.45); }
+.hudState.gutterState { color: rgba(255,61,104,.9); animation: strobe .35s steps(2) infinite; }
+@keyframes strobe { 50% { opacity: .3; } }
+
+.leaderboard { position: fixed; z-index: 5; top: calc(env(safe-area-inset-top) + 14px + var(--vv-top, 0px)); right: calc(env(safe-area-inset-right) + 16px); pointer-events: none;
+  text-align: right; font-size: .78rem; line-height: 1.6; color: rgba(150,180,195,.75);
+  /* the rows are right-aligned and repoll every 2s: proportional digits would
+     shove the names sideways every time someone's light ticks over */
+  font-variant-numeric: tabular-nums; }
+.leaderboard h4 { font-size: .6875rem; letter-spacing: .2em; text-transform: uppercase; color: rgba(90,255,220,.45); margin-bottom: 3px; }
+/* the player's own row — bold alone is faint at this size, so it lights up too */
+.leaderboard b { font-weight: 600; color: #eafff8; }
+
+.lanternBtn { position: fixed; z-index: 6; right: calc(env(safe-area-inset-right) + 18px); bottom: calc(env(safe-area-inset-bottom) + 22px);
+  width: 74px; height: 74px; padding: 0; border-radius: 50%;
+  border: 2px solid rgba(90,255,220,.5); background: radial-gradient(circle at 50% 45%, rgba(90,255,220,.22), rgba(1,15,14,.6) 70%);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  box-shadow: 0 0 26px rgba(90,255,220,.22); transition: all .25s; }
+.lanternBtn::after { content: ""; width: 22px; height: 22px; border-radius: 50%;
+  background: radial-gradient(circle, #d8fff2 20%, rgba(90,255,220,.6) 60%, transparent 75%); }
+.lanternBtn:focus-visible { outline: 2px solid #d8fff2; outline-offset: 4px; }
+
+/* keyboard-and-mouse setups don't need the touch hide button */
+@media (hover: hover) and (pointer: fine) {
+  .lanternBtn { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hudState.gutterState { animation: none; }
+}
+
+/* The handshake before the arena opens. This build joins on mount (App.tsx),
+   so nothing stands between load and the water except a few hundred
+   milliseconds of socket — long enough to need a surface, too short to deserve
+   a screen. */
+.descending {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #010b10;
+  color: #6c848f;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  animation: descendingPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes descendingPulse {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 0.85; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .descending { animation: none; opacity: 0.7; }
+}

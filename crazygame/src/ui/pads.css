@@ -1,0 +1,136 @@
+/* Two-thumb scheme (§9, opt-in). Same lantern vocabulary as the rest of the
+   HUD — thin rings of held light over the water, nothing that reads as plastic
+   console chrome.
+
+   Two corners, two thumbs: the stick owns the bottom-left, the action buttons
+   stack up the bottom-right edge, so the phone is held in both hands and each
+   thumb has its own instrument. The two buttons share a diameter — a stack of
+   unequal circles reads as a mistake before it reads as a hierarchy — so the
+   jump is marked as the primary by weight instead: a brighter rim, a hotter
+   glow, the near-white of held light against the hide button's teal, and the
+   bottom slot, where the right thumb already rests. Everything is kept
+   deliberately small: these are instruments laid over the arena, and the arena
+   is the thing you are trying to see. */
+
+/* Fluid sizing shared by both corners (and read by the coach card, which has
+   to clear them). Sizes track vmin — the device's short edge, which is the
+   same physical edge in portrait and landscape — so rotating never jumps the
+   controls between size tiers, small phones shrink smoothly, and tablets get
+   proportionally larger instruments without a breakpoint ladder. The knob's
+   travel and deadzone are measured from the rendered sizes at runtime, so
+   nothing here needs restating in JS. */
+:root {
+  /* Gap from each screen edge. Per-side safe-area insets are added to this at
+     the point of use, since they differ side to side — added, not max()ed:
+     the inset marks where the unusable region *ends*, so max() spends the whole
+     gap paying for the notch and leaves the control flush against it. That is
+     invisible in portrait, where the side insets are 0 and the gap wins, and
+     wrong in landscape on a notched phone, where the 62px island inset swallows
+     an 18px gap whole and the button ends up touching the island. */
+  --pad-edge: clamp(18px, 3vmin, 32px);
+  /* ~102px on a small phone, ~150px on a tablet */
+  --pad-stick: clamp(92px, 70px + 9vmin, 150px);
+  --pad-knob: calc(var(--pad-stick) * 0.43);
+  /* ~56px on a phone, ~76px on a tablet */
+  --pad-btn: clamp(50px, 38px + 5vmin, 76px);
+  --pad-gap: clamp(10px, 1.6vmin, 16px);
+  /* top edge of the right-hand button stack, measured from the bottom of the
+     screen — the taller of the two corners, which the coach card clears */
+  --pad-stack-top: calc(
+    env(safe-area-inset-bottom) + var(--pad-edge) + var(--pad-btn) * 2 + var(--pad-gap)
+  );
+}
+
+.padStick,
+.padBtn {
+  position: fixed;
+  z-index: 6;
+  touch-action: none;
+  border-radius: 50%;
+  /* the pads are instruments, not text — never let a drag select them */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---- stick: left thumb, steering only */
+.padStick {
+  left: calc(env(safe-area-inset-left) + var(--pad-edge));
+  bottom: calc(env(safe-area-inset-bottom) + var(--pad-edge));
+  width: var(--pad-stick);
+  height: var(--pad-stick);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(90, 255, 220, 0.22);
+  background: radial-gradient(circle at 50% 50%, rgba(90, 255, 220, 0.05), rgba(1, 12, 16, 0.5) 72%);
+  box-shadow: inset 0 0 30px rgba(90, 255, 220, 0.05);
+}
+.padKnob {
+  width: var(--pad-knob);
+  height: var(--pad-knob);
+  border-radius: 50%;
+  border: 1px solid rgba(90, 255, 220, 0.5);
+  background: radial-gradient(circle at 50% 42%, rgba(90, 255, 220, 0.3), rgba(1, 15, 14, 0.72) 70%);
+  box-shadow: 0 0 22px rgba(90, 255, 220, 0.2);
+  /* no transition: the knob must sit exactly under the thumb, and easing
+     between frames would read as input lag on the one control that steers */
+}
+
+/* ---- action stack, right edge: jump on the bottom under the resting thumb,
+   hide one gap above it, both sharing the stick's edge inset so the two
+   corners read as halves of one instrument. */
+.padBtn {
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: opacity 0.12s, box-shadow 0.2s;
+}
+/* the icon is one colour and one opacity, both owned by the button: every
+   state (cooling down, hidden, pressed) is a change to the control, and the
+   glyph follows it without needing a second set of art */
+.padBtn svg {
+  width: 46%;
+  height: 46%;
+  color: inherit;
+  opacity: var(--icon-op, 0.92);
+  transition: opacity 0.18s;
+}
+
+.padJump {
+  right: calc(env(safe-area-inset-right) + var(--pad-edge));
+  bottom: calc(env(safe-area-inset-bottom) + var(--pad-edge));
+  width: var(--pad-btn);
+  height: var(--pad-btn);
+  color: #eafff8;
+  border: 2px solid rgba(216, 255, 242, 0.5);
+  background: radial-gradient(circle at 50% 45%, rgba(216, 255, 242, 0.16), rgba(1, 15, 14, 0.55) 70%);
+  box-shadow: 0 0 30px rgba(90, 255, 220, 0.22);
+}
+.padJump:active { box-shadow: 0 0 44px rgba(216, 255, 242, 0.5); }
+/* the flare is fuel (§7): dimmed while a press would spend light for nothing */
+.padJump.spent { opacity: 0.32; }
+
+.padHide {
+  right: calc(env(safe-area-inset-right) + var(--pad-edge));
+  bottom: calc(
+    env(safe-area-inset-bottom) + var(--pad-edge) + var(--pad-btn) + var(--pad-gap)
+  );
+  width: var(--pad-btn);
+  height: var(--pad-btn);
+  color: #5affdc;
+  border: 1px solid rgba(90, 255, 220, 0.42);
+  background: radial-gradient(circle at 50% 45%, rgba(90, 255, 220, 0.12), rgba(1, 15, 14, 0.5) 70%);
+  box-shadow: 0 0 18px rgba(90, 255, 220, 0.16);
+}
+.padHide:active { box-shadow: 0 0 30px rgba(90, 255, 220, 0.4); }
+/* hidden: the glyph swaps sun for moon (in the markup) and the whole control
+   banks down, so the dark stance reads at a glance */
+.padHide.off {
+  --icon-op: 0.5;
+  border-color: rgba(90, 255, 220, 0.2);
+  box-shadow: none;
+}
+
+.padBtn:focus-visible { outline: 2px solid #d8fff2; outline-offset: 4px; }

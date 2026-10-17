@@ -1,0 +1,98 @@
+/* Sits above the water, bottom-centre, clear of the HUD (top-left), the
+   leaderboard (top-right) and both touch pads (bottom corners). Deliberately
+   small: the arena behind it is already playable, so this is an offer rather
+   than a gate. */
+
+.nameOverlay {
+  position: fixed;
+  z-index: 8;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom) + 24px + var(--vv-bottom, 0px));
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+
+  padding: 14px 18px;
+  max-width: min(92vw, 340px);
+
+  background: rgba(3, 10, 14, 0.86);
+  border: 1px solid rgba(120, 170, 190, 0.22);
+  border-radius: 3px;
+  backdrop-filter: blur(6px);
+  color: #cfe0e7;
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: center;
+
+  animation: nameOverlayIn 320ms ease-out both;
+}
+
+@keyframes nameOverlayIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nameOverlay { animation: none; }
+}
+
+.nameOverlay label {
+  font-size: 13px;
+  color: #8ea7b2;
+  letter-spacing: 0.01em;
+}
+
+.nameOverlayRow {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.nameOverlay input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 7px 10px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(120, 170, 190, 0.28);
+  border-radius: 2px;
+  color: #e6f1f5;
+  font: inherit;
+  /* The global rule in index.css disables selection everywhere so a drag on the
+     water never highlights the HUD. This is the one field that has to take it
+     back, or the player cannot select what they typed. */
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.nameOverlay input:focus-visible,
+.nameOverlay button:focus-visible {
+  outline: 2px solid rgba(240, 168, 74, 0.8);
+  outline-offset: 1px;
+}
+
+.nameOverlay button {
+  padding: 7px 14px;
+  background: rgba(240, 168, 74, 0.16);
+  border: 1px solid rgba(240, 168, 74, 0.5);
+  border-radius: 2px;
+  color: #f2c68a;
+  font: inherit;
+  cursor: pointer;
+}
+
+.nameOverlay button:hover { background: rgba(240, 168, 74, 0.26); }
+
+.nameOverlaySkip {
+  background: none !important;
+  border: none !important;
+  color: #6c848f !important;
+  font-size: 12px !important;
+  padding: 2px !important;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.nameOverlaySkip:hover { color: #93a9b4 !important; }

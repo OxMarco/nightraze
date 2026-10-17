@@ -1,0 +1,28 @@
+{
+  "name": "@nightraze/crazygame",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The CrazyGames build. Uploaded to their developer portal and served from their CDN, so it is a standalone copy of the game client rather than a second entry point of client/ — see README.md for what that costs and how to keep the two in step.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "package": "npm run build && cd dist && zip -r ../nightraze-crazygames.zip . && cd .. && echo \"built nightraze-crazygames.zip\""
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.12.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^6.0.0"
+  }
+}

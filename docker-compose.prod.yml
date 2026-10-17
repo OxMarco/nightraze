@@ -49,9 +49,18 @@ services:
       TUNE_TOKEN: ${TUNE_TOKEN:-}
       # Empty falls back to the CrazyGames domain list in server/src/embedding.ts.
       EMBED_FRAME_ANCESTORS: ${EMBED_FRAME_ANCESTORS:-}
-      # Deliberately just our own origin: the /play socket's Origin is the
-      # document running the script, which inside a portal's iframe is still us.
-      ALLOWED_ORIGINS: https://${DOMAIN:?set DOMAIN in .env}
+      # Who may open a /play socket. A WebSocket's Origin is the origin of the
+      # document running the script, and that is no longer only us: CrazyGames
+      # serves the crazygame/ build from their own CDN, so portal players
+      # connect from a CrazyGames origin. This used to read "deliberately just
+      # our own origin", which was correct while they framed nightraze.io/embed
+      # and is now the difference between a working portal build and every
+      # portal player being closed with 1008.
+      #
+      # Our own domain is always allowed. ALLOWED_ORIGINS in .env adds to it —
+      # put the origin the uploaded build is actually served from there, taken
+      # from the developer portal rather than guessed. See crazygame/README.md.
+      ALLOWED_ORIGINS: https://${DOMAIN:?set DOMAIN in .env}${PORTAL_ORIGINS:+,$PORTAL_ORIGINS}
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 3s

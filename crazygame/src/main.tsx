@@ -1,16 +1,15 @@
-/* Entry point for embed.html — the document CrazyGames iframes.
+/* Entry point for the uploaded CrazyGames build.
 
-   Identical to main.tsx but for the platform install and the wait in front of
-   the render. The wait is load-bearing rather than tidy: readName() and
-   readBest() are synchronous useState initializers that run during the first
-   render, and the SDK's data module only answers once init() has resolved.
-   Render first and a returning player gets an empty name field and no personal
-   best, then never gets them back, because those values are only ever read
-   once.
+   The wait in front of the render is load-bearing rather than tidy: readName()
+   and readBest() are synchronous useState initializers that run during the
+   first render, and the SDK's data module only answers once init() has
+   resolved. Render first and a returning player gets an empty name field and
+   no personal best, then never gets them back, because those values are only
+   ever read once.
 
    Nothing here may throw. platform.ready() resolves even when the SDK is
-   missing, disabled or in fail mode, and every event method is a no-op in those
-   states, so the arena opens either way. */
+   missing, disabled or in fail mode, and every event method is a no-op in
+   those states, so the arena opens either way. */
 
 import { createRoot } from "react-dom/client";
 import App from "./App.js";
@@ -34,7 +33,8 @@ void platform()
     installCrashReporting();
     platform().loadingStart();
     createRoot(document.getElementById("root")!).render(<CrashBoundary><App /></CrashBoundary>);
-    // The start screen is up on the next paint; that is the moment the player
-    // can act, which is what the host is timing.
+    // The arena is up on the next paint. Unlike the .io build there is no start
+    // screen behind this — App joins on mount — so loadingStop lands where the
+    // portal expects it: the moment the player can act.
     requestAnimationFrame(() => platform().loadingStop());
   });

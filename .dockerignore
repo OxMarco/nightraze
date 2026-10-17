@@ -22,3 +22,8 @@ scripts
 docker-compose*.yml
 Makefile
 *.md
+
+# The CrazyGames build. It is uploaded to their CDN, never served by this
+# server, so it has no business in the runtime image or in the build context
+# that produces it.
+crazygame

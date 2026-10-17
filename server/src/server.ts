@@ -7,7 +7,12 @@ import { join, sep } from "node:path";
 import { Room } from "./game/room.js";
 import { IpBanStore } from "./ip-ban-store.js";
 import { MetricsStore } from "./metrics-store.js";
-import { NO_FRAMING, embedFrameAncestors } from "./embedding.js";
+
+/** frame-ancestors for every document this server serves: nobody.
+
+    frame-ancestors and not X-Frame-Options: where a browser honours both, the
+    older header wins, so setting it would quietly override this. */
+const NO_FRAMING = "frame-ancestors 'none'";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -256,11 +261,12 @@ function clientLocation(
   return "unknown";
 }
 
-// Every document we serve declares who may frame it. /embed sets its own
-// permissive policy in its handler; this closes the door on everything else,
-// including the SPA fallback, so a new route can never become embeddable by
-// omission. Keyed on the response content type rather than the path for the
-// same reason.
+// Nothing we serve may be framed by anyone. Every document this server hands
+// out is nightraze.io's own page now — the portal build lives on CrazyGames'
+// CDN — so there is no longer an exception to carve out, and this is a flat
+// refusal rather than the default half of a pair. Keyed on the response content
+// type rather than the path, so a new route cannot become embeddable by
+// omission.
 //
 // Everything is also readable cross-origin. Portal QA tooling probes our
 // resources from its own origin and reports anything opaque as missing; a
@@ -393,11 +399,27 @@ if (TUNE_TOKEN) {
 // Connect with:  ws://host:3000/play?name=YourName
 // All frames in both directions are binary protobuf (see proto/nightraze/v1/game.proto).
 fastify.get("/play", { websocket: true }, (socket, req) => {
-  // Note for anyone adding a portal: this list does NOT need the embedder's
-  // origin. A WebSocket's Origin is the origin of the document running the
-  // script, and inside the CrazyGames frame that document is still ours —
-  // https://nightraze.io. Adding crazygames.com here would only widen who may
-  // open a socket, never fix a connection that was failing.
+  // This list DOES need the portal's origin, and that is a reversal worth
+  // stating plainly, because the previous note here said the opposite and was
+  // correct at the time.
+  //
+  // A WebSocket's Origin is the origin of the document running the script. When
+  // CrazyGames framed https://nightraze.io/embed, that document was ours and
+  // the Origin was ours; the portal never needed naming, and naming it would
+  // only have widened who could connect. Now CrazyGames serves the bundle from
+  // their own CDN, so the document is theirs and the Origin is theirs.
+  //
+  // Production does set it — docker-compose.prod.yml pins this to our own
+  // domain — so the portal build is refused with 1008 until PORTAL_ORIGINS in
+  // .env names the origin CrazyGames serves the upload from. That value comes
+  // from the developer portal, or from the Origin logged on the line below when
+  // a real connection is refused. It is not guessable, and getting it wrong
+  // fails closed for every portal player at once.
+  //
+  // frame-ancestors used to be what stopped a copy of the bundle being pointed
+  // at this arena from somebody else's page, and no longer participates. This
+  // check is the only thing left that could, which is the argument for keeping
+  // the list tight rather than emptying it to make the problem go away.
   const origin = req.headers.origin;
   if (origin && allowedOrigins.size > 0 && !allowedOrigins.has(origin)) {
     fastify.log.warn({ origin }, "connection rejected: origin not allowed");
@@ -526,25 +548,19 @@ if (existsSync(join(publicDir, "index.html"))) {
       );
     },
   });
-  // The document CrazyGames iframes (client/embed.html): the same app, plus
-  // their SDK. Declared as a route rather than left to the SPA fallback, which
-  // would hand back index.html — the entry point is what tells the client which
-  // platform it is running on, so serving the wrong one silently disables the
-  // whole integration. Registered before the fallback for that reason.
-  const embedCsp = embedFrameAncestors();
-  if (existsSync(join(publicDir, "embed.html"))) {
-    fastify.get("/embed", async (_req, reply) => {
-      reply.header("content-security-policy", embedCsp);
-      return reply.sendFile("embed.html");
-    });
-    fastify.log.info({ csp: embedCsp }, "serving the embeddable client at /embed");
-  } else {
-    fastify.log.warn("embed.html missing from the client build; /embed disabled");
-  }
+  // There is no /embed here any more. CrazyGames hosts the game itself now —
+  // crazygame/ is built, zipped and uploaded to their CDN — so nothing frames
+  // this server, and the frame-ancestors allowlist that used to name their
+  // regional domains went with it (see git history for src/embedding.ts if it
+  // ever needs to come back).
+  //
+  // What replaces it as the boundary is ALLOWED_ORIGINS on /play above. Framing
+  // is no longer how a reskin would happen; a copy of the uploaded bundle
+  // pointed at this server is, and only the socket can refuse that.
 
   // Standing documents, served at extensionless paths because that is how they
   // get cited — in a portal submission form, in a store listing, in an email.
-  // Explicit routes for the same reason /embed is one: without them the SPA
+  // Explicit routes because without them the SPA
   // fallback answers /privacy with the game and HTTP 200, so a reviewer opening
   // the policy URL sees an arena and a link that looks live is quietly broken.
   // The list is what may exist, not what must: privacy.html ships today and

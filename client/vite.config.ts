@@ -17,21 +17,6 @@ const target = process.env.VITE_PROXY_TARGET ?? "http://localhost:3000";
 // file; left off for bare-metal dev (native events, no polling CPU cost).
 const usePolling = process.env.CHOKIDAR_USEPOLLING === "true";
 
-// In production the game server routes /embed to embed.html; the dev server
-// would fall back to index.html instead and quietly hand back the wrong entry —
-// which looks like a working game with the SDK missing. Match the real URL.
-const embedRoute: Plugin = {
-  name: "nightraze-embed-route",
-  configureServer(server) {
-    server.middlewares.use((req, _res, next) => {
-      if (req.url === "/embed" || req.url?.startsWith("/embed?")) {
-        req.url = "/embed.html" + req.url.slice("/embed".length);
-      }
-      next();
-    });
-  },
-};
-
 /* Emit a .br and a .gz beside every compressible build artifact.
 
    Compressed here rather than by the server, and that is the point rather than
@@ -101,18 +86,10 @@ const precompress: Plugin = {
 };
 
 export default defineConfig({
-  plugins: [tailwindcss(), react(), embedRoute, precompress],
+  plugins: [tailwindcss(), react(), precompress],
   build: {
-    rollupOptions: {
-      // Two documents, one app. index.html is nightraze.io itself; embed.html is
-      // the one a portal iframes, and the only one that loads a portal SDK (see
-      // src/platform/). They share every chunk under /assets, so the second
-      // entry costs a few hundred bytes of HTML, not a second bundle.
-      input: {
-        main: fileURLToPath(new URL("index.html", import.meta.url)),
-        embed: fileURLToPath(new URL("embed.html", import.meta.url)),
-      },
-    },
+    // One entry. embed.html is gone: the portal build is its own package now
+    // (../crazygame), uploaded to CrazyGames rather than served from here.
   },
   server: {
     host: true, // bind 0.0.0.0 so the port is reachable from outside the container
