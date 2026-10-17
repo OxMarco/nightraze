@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useConnectionStatus, useGameActions, useGameClient } from "../game/hooks.js";
 import { readBest, recordRun } from "../game/best.js";
 import { setScheme, useControlScheme, useIsTouch } from "../game/controls.js";
@@ -202,12 +202,11 @@ export function PrivacyNotice({ hostAccount }: { hostAccount: boolean }) {
 }
 
 // ---------------------------------------------------------------- death
-export function DeathOverlay({ by, peak }: { by: string; peak: number }) {
+/** `children` render under "once more": the portal build asks for a name here. */
+export function DeathOverlay({ by, peak, children }: { by: string; peak: number; children?: ReactNode }) {
   const client = useGameClient();
   const { player } = useIdentity();
-  // recorded once, when the overlay mounts — one run, one entry. The host-page
-  // celebration is not here: it fired mid-run, the moment the record actually
-  // broke (game/best.ts) — this screen only reports it.
+  // recorded once, when the overlay mounts — one run, one entry
   const [run] = useState(() => recordRun(peak));
   return (
     <div className="modalBackdrop seeThrough">
@@ -236,6 +235,7 @@ export function DeathOverlay({ by, peak }: { by: string; peak: number }) {
             once more
           </button>
         </div>
+        {children}
         <PrivacyNotice hostAccount={player !== null} />
       </div>
     </div>

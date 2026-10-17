@@ -1,27 +1,20 @@
-/* Sits above the water, bottom-centre, clear of the HUD (top-left), the
-   leaderboard (top-right) and both touch pads (bottom corners). Deliberately
-   small: the arena behind it is already playable, so this is an offer rather
-   than a gate. */
+/* Rendered inside the death screen, under "once more" (see DeathOverlay's
+   children). Deliberately small: the next run is one tap away either way, so
+   this is an offer rather than a gate. */
 
 .nameOverlay {
-  position: fixed;
-  z-index: 8;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: calc(env(safe-area-inset-bottom) + 24px + var(--vv-bottom, 0px));
-
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
 
+  margin: 22px auto 0;
   padding: 14px 18px;
   max-width: min(92vw, 340px);
 
   background: rgba(3, 10, 14, 0.86);
   border: 1px solid rgba(120, 170, 190, 0.22);
   border-radius: 3px;
-  backdrop-filter: blur(6px);
   color: #cfe0e7;
   font-size: 14px;
   line-height: 1.4;
@@ -31,8 +24,8 @@
 }
 
 @keyframes nameOverlayIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -39,25 +39,3 @@ export function recordRun(peak: number): RunRecord {
   if (isBest) platform().storage.set(KEY, String(floored));
   return { peak: floored, best: Math.max(previous, floored), isBest };
 }
-
-/* The host page is allowed to celebrate with us, but a record is broken while
-   you are alive, not when you die — confetti over "the dark closed over you"
-   reads as mockery. So the celebration fires the instant the live light first
-   passes the stored best, and the death overlay only reports it. Still rare by
-   construction: at most once per run, and never on the first run of a browser
-   (nothing beaten, nothing to celebrate — otherwise every newcomer's spawn
-   would throw confetti). */
-
-let toBeat = 0; // 0 = nothing to beat this run, or already celebrated
-
-/** Arm the celebration for a fresh run. Call when play actually starts. */
-export function beginRun(): void {
-  toBeat = readBest();
-}
-
-/** Report the live light; fires the host celebration on first passing the best. */
-export function noteLight(light: number): void {
-  if (toBeat <= 0 || light <= toBeat) return;
-  toBeat = 0;
-  platform().happytime();
-}

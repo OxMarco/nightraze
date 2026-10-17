@@ -13,29 +13,33 @@
    both fire when the connection leaves idle, and nothing left idle until
    someone pressed play.
 
-   So the arena opens itself and the name question follows the player in. Who
-   actually sees this is narrow by design:
+   So the arena opens itself and the name question waits for the first death.
+   It was first asked in the live arena, over a lantern whose two seconds of
+   spawn protection ran out mid-keystroke, and the typist got eaten. The death
+   screen is the one moment nobody can drain you, and "once more" was about to
+   reconnect anyway. Who actually sees this is narrow by design:
 
      - a signed-in CrazyGames player never does. The portal already knows a
        name their friends recognise, and identity.ts prefers it over anything
        typed here.
      - a returning browser never does. prefs.ts has the last name the server
        accepted from it.
-     - a first-time guest does, once, having already been dropped into a
-       playable arena under the default name.
+     - a first-time guest does, after their first run under the default name,
+       and not again this session once they wave it away.
 
    Answering it reconnects, because the name is settled in the socket handshake
-   (`?name=`) and there is no rename frame on the wire. That costs the seconds
-   of the run so far, which is the right trade for a run that is seconds old —
-   and it is the same reconnect that "once more" already performs, so the host
-   sees an ordinary gameplayStart rather than anything novel. */
+   (`?name=`) and there is no rename frame on the wire. On the death screen
+   that is simply the next run starting under the new name — the same new spawn
+   "once more" would have given, so the host sees an ordinary gameplayStart. */
 
 import { useState } from "react";
 import { useGameActions } from "../game/hooks.js";
 import { useIdentity } from "../game/identity.js";
 import { MAX_NAME, proposeName, readName } from "../game/prefs.js";
-import { PrivacyNotice } from "./modals.js";
 import "./nameOverlay.css";
+
+// Module scope so "not now" outlives the overlay, which remounts every death.
+let declined = false;
 
 export function NameOverlay() {
   const { player } = useIdentity();
@@ -44,22 +48,27 @@ export function NameOverlay() {
   // mid-keystroke.
   const [arrivedNamed] = useState(() => readName() !== "");
   const [name, setName] = useState("");
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(declined);
   const { connect } = useGameActions();
 
   if (player || arrivedNamed || dismissed) return null;
 
+  const dismiss = () => {
+    declined = true;
+    setDismissed(true);
+  };
+
   const commit = () => {
     const typed = name.trim();
-    setDismissed(true);
-    if (!typed) return;          // "play as ember" by another route
+    dismiss();
+    if (!typed) return;          // "not now" by another route
     proposeName(typed);          // kept only if the arena hands it back intact
     connect(typed);              // the handshake is where a name is settled
   };
 
   return (
     <div className="nameOverlay ui" role="dialog" aria-label="Choose your name">
-      <label htmlFor="nameOverlayInput">What should the arena call you?</label>
+      <label htmlFor="nameOverlayInput">What should the arena call you next run?</label>
       <div className="nameOverlayRow">
         <input
           id="nameOverlayInput"
@@ -71,21 +80,20 @@ export function NameOverlay() {
           spellCheck={false}
           onChange={(ev) => setName(ev.target.value)}
           onKeyDown={(ev) => {
-            // The arena is live behind this box and listens on window for Space
+            // The arena listens on window for Space
             // and L. A name with a space in it should not also shutter the
             // lantern, and Escape should close the box rather than reach
             // whatever else may come to listen for it.
             ev.stopPropagation();
             if (ev.key === "Enter") commit();
-            if (ev.key === "Escape") setDismissed(true);
+            if (ev.key === "Escape") dismiss();
           }}
         />
-        <button type="button" onClick={commit}>Set</button>
+        <button type="button" onClick={commit}>play</button>
       </div>
-      <button type="button" className="nameOverlaySkip" onClick={() => setDismissed(true)}>
-        play as ember
+      <button type="button" className="nameOverlaySkip" onClick={dismiss}>
+        not now
       </button>
-      <PrivacyNotice hostAccount={false} />
     </div>
   );
 }

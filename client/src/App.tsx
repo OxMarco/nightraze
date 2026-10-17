@@ -8,7 +8,6 @@ import {
   useWorldStateThrottled,
 } from "./game/hooks.js";
 import { useControlScheme, useIsTouch } from "./game/controls.js";
-import { beginRun, noteLight } from "./game/best.js";
 import { useIdentity } from "./game/identity.js";
 import { confirmName, isNamePending, readName } from "./game/prefs.js";
 import { useAutoJoin, useSessionPresence } from "./game/session.js";
@@ -116,9 +115,6 @@ function useGameplayReporting(state: string): void {
   useEffect(() => {
     if (!playing) return;
     platform().gameplayStart();
-    // Same trigger arms the record celebration: a run's "best to beat" is
-    // whatever storage held when this run started (game/best.ts).
-    beginRun();
     return () => platform().gameplayStop();
   }, [playing]);
 }
@@ -200,9 +196,6 @@ function Arena() {
     if (isNamePending()) {
       confirmName(self?.name);
     }
-    // the record celebration belongs to the living: only frames from an open
-    // run count toward it, never the corpse the server may still be showing us
-    if (status.state === "open" && self) noteLight(self.light);
 
     const renderer = rendererRef.current;
     if (!renderer) return;

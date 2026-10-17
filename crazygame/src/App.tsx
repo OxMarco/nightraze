@@ -12,7 +12,6 @@ import {
   useWorldStateThrottled,
 } from "./game/hooks.js";
 import { useControlScheme, useIsTouch } from "./game/controls.js";
-import { beginRun, noteLight } from "./game/best.js";
 import { useIdentity } from "./game/identity.js";
 import { confirmName, isNamePending, readName } from "./game/prefs.js";
 import { useAutoJoin, useSessionPresence } from "./game/session.js";
@@ -142,9 +141,6 @@ function useGameplayReporting(state: string): void {
   useEffect(() => {
     if (!playing) return;
     platform().gameplayStart();
-    // Same trigger arms the record celebration: a run's "best to beat" is
-    // whatever storage held when this run started (game/best.ts).
-    beginRun();
     return () => platform().gameplayStop();
   }, [playing]);
 }
@@ -226,9 +222,6 @@ function Arena() {
     if (isNamePending()) {
       confirmName(self?.name);
     }
-    // the record celebration belongs to the living: only frames from an open
-    // run count toward it, never the corpse the server may still be showing us
-    if (status.state === "open" && self) noteLight(self.light);
 
     const renderer = rendererRef.current;
     if (!renderer) return;
@@ -398,11 +391,14 @@ function Arena() {
             />
           )
         : <LanternButton />}
-      {status.state === "dead" && <DeathOverlay by={status.by} peak={status.peakLight} />}
-      {/* The start screen's name field, moved into the water — shown only to a
-          guest who arrived with no name at all (ui/nameOverlay.tsx). Not while
-          the coach is up: one thing at a time is being asked of a new player. */}
-      {!teaching && status.state === "open" && <NameOverlay />}
+      {/* The start screen's name field is asked on the death screen — shown
+          only to a guest who arrived with no name at all (ui/nameOverlay.tsx).
+          Never in the live arena: typing there got the typist eaten. */}
+      {status.state === "dead" && (
+        <DeathOverlay by={status.by} peak={status.peakLight}>
+          <NameOverlay />
+        </DeathOverlay>
+      )}
     </>
   );
 }
