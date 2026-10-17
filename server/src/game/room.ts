@@ -45,6 +45,11 @@ const CFG = {
   pairImmunity: 0.5, burnReveal: 0.5,
   crescentHalfAngle: (100 * Math.PI) / 180,
   spawnProtection: 2.0,
+  // A human's protection holds until their first deliberate steer or dash, so
+  // nobody is drained while still reading the tutorial or finding the stick —
+  // up to this long. A protected lantern cannot burn anyone either, so the
+  // hold buys an idle player nothing but time.
+  spawnHoldMax: 30.0,
 
   mergeRadius: 12, settleRest: 25, settleFlicker: 3,
 
@@ -198,6 +203,7 @@ export interface Player {
   lit: boolean;
   revealT: number;
   protectedUntil: number;          // sim-seconds
+  awaitingSteer: boolean;          // human spawned and not yet steered: hold protection
   dashT: number; dashCd: number; dashDX: number; dashDY: number;
   strikeT: number;                 // dash-asymmetry window: while > 0, this lantern doesn't spill when touched
   toggleCd: number;
@@ -372,7 +378,8 @@ export class Room {
       light: CFG.starterEmber,
       lit: true,
       revealT: 0,
-      protectedUntil: this.now + CFG.spawnProtection,
+      protectedUntil: this.now + (socket ? CFG.spawnHoldMax : CFG.spawnProtection),
+      awaitingSteer: socket !== null,
       dashT: 0, dashCd: 0, dashDX: 0, dashDY: 0,
       strikeT: 0,
       toggleCd: 0,
@@ -442,7 +449,8 @@ export class Room {
     p.revealT = 0;
     p.dashT = 0; p.dashCd = 0; p.strikeT = 0; p.toggleCd = 0;
     p.dirX = 0; p.dirY = 0;
-    p.protectedUntil = this.now + CFG.spawnProtection;
+    p.protectedUntil = this.now + (p.socket ? CFG.spawnHoldMax : CFG.spawnProtection);
+    p.awaitingSteer = p.socket !== null;
     this.onRespawn?.(p);
     this.send(p, { msg: { case: "welcome", value: { playerId: p.id, worldSize: CFG.arena } } });
   }
@@ -508,6 +516,11 @@ export class Room {
       case "input": {
         const { tx, ty } = msg.msg.value;
         if (!Number.isFinite(tx) || !Number.isFinite(ty)) { this.strike(p, "non-finite input"); return; }
+        if (p.awaitingSteer && Math.hypot(tx, ty) > 1) {
+          // the hold ends where ordinary spawn protection would have begun
+          p.awaitingSteer = false;
+          p.protectedUntil = Math.min(p.protectedUntil, this.now + CFG.spawnProtection);
+        }
         this.applySteer(p, tx, ty);
         break;
       }
@@ -573,6 +586,7 @@ export class Room {
     p.lit = true;                                    // the flame is the thrust
     p.revealT = Math.max(p.revealT, CFG.revealLinger);
     p.protectedUntil = this.now;                     // dash breaks spawn protection
+    p.awaitingSteer = false;
   }
 
   // ---------------------------------------------------------------- combat (§7)

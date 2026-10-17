@@ -96,6 +96,29 @@ test("respawn synchronously restores the protected starter ember", () => {
   assert.ok(player.protectedUntil > 0);
 });
 
+test("a human stays protected until their first steer", () => {
+  const { room, player } = makeRoomAndPlayer();
+  const steer = (tx, ty) => Buffer.from(toBinary(
+    ClientMessageSchema,
+    create(ClientMessageSchema, { msg: { case: "input", value: { tx, ty } } }),
+  ));
+
+  // well past ordinary spawn protection, still untouched: still held
+  room.now += 10;
+  assert.ok(room.now < player.protectedUntil);
+
+  room.handleMessage(player, steer(0, 0), true);   // a released stick is not a steer
+  assert.ok(room.now + 5 < player.protectedUntil);
+
+  room.handleMessage(player, steer(30, 0), true);
+  assert.equal(player.awaitingSteer, false);
+  assert.ok(player.protectedUntil <= room.now + 2);
+
+  const bot = room.addPlayer(null, "bot");
+  assert.equal(bot.awaitingSteer, false);
+  assert.ok(bot.protectedUntil <= room.now + 2);
+});
+
 /* Contact-law tests drive the private tick() directly (TS privacy is
    compile-time only) with two overlapping players and the field cleared,
    so the light ledger contains nothing but the contact itself. */
