@@ -34,6 +34,7 @@ import { useState } from "react";
 import { useGameActions } from "../game/hooks.js";
 import { useIdentity } from "../game/identity.js";
 import { MAX_NAME, proposeName, readName } from "../game/prefs.js";
+import { PrivacyNotice } from "./modals.js";
 import "./nameOverlay.css";
 
 export function NameOverlay() {
@@ -84,6 +85,7 @@ export function NameOverlay() {
       <button type="button" className="nameOverlaySkip" onClick={() => setDismissed(true)}>
         play as ember
       </button>
+      <PrivacyNotice hostAccount={false} />
     </div>
   );
 }

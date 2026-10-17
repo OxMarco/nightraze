@@ -186,7 +186,7 @@ const TERMS_URL = "https://nightraze.io/terms";
    the claim narrows to the one we can still make: the account is the host's,
    and we keep none of our own. The policy page has always said this at
    length; this line just stops disagreeing with it. */
-function PrivacyNotice({ hostAccount }: { hostAccount: boolean }) {
+export function PrivacyNotice({ hostAccount }: { hostAccount: boolean }) {
   return (
     <p className="legalNote">
       {hostAccount ? "no account of ours" : "no account"}, no cookies, no trackers ·{" "}
@@ -204,6 +204,7 @@ function PrivacyNotice({ hostAccount }: { hostAccount: boolean }) {
 // ---------------------------------------------------------------- death
 export function DeathOverlay({ by, peak }: { by: string; peak: number }) {
   const client = useGameClient();
+  const { player } = useIdentity();
   // recorded once, when the overlay mounts — one run, one entry. The host-page
   // celebration is not here: it fired mid-run, the moment the record actually
   // broke (game/best.ts) — this screen only reports it.
@@ -235,6 +236,7 @@ export function DeathOverlay({ by, peak }: { by: string; peak: number }) {
             once more
           </button>
         </div>
+        <PrivacyNotice hostAccount={player !== null} />
       </div>
     </div>
   );

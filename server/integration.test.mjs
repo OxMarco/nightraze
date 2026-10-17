@@ -27,7 +27,7 @@ async function startServer() {
       BAN_DB_PATH: ":memory:",
       METRICS_DB_PATH: ":memory:",
       METRICS_TOKEN: "integration-metrics-token",
-      ALLOWED_ORIGINS: "https://allowed.example",
+      ALLOWED_ORIGINS: "https://allowed.example,https://*.portal.example",
     },
     stdio: ["ignore", "ignore", "pipe"],
   });
@@ -111,6 +111,12 @@ if (ownsServer) {
   const rejected = await rejectedConnection({ origin: "https://evil.example" });
   check("cross-origin browser socket is rejected", rejected.code === 1008,
     `code=${rejected.code} reason=${rejected.reason}`);
+  const lookalike = await rejectedConnection({ origin: "https://portal.example.evil.example" });
+  check("wildcard origin does not match a lookalike host", lookalike.code === 1008,
+    `code=${lookalike.code} reason=${lookalike.reason}`);
+  const portal = await rejectedConnection({ origin: "https://game.portal.example" });
+  check("wildcard origin admits a subdomain", portal.code !== 1008,
+    `code=${portal.code} reason=${portal.reason}`);
 }
 
 const a = makeClient("alpha");

@@ -211,6 +211,31 @@ const allowedOrigins = new Set(
     .filter(Boolean),
 );
 
+// "https://*.example.com" admits any subdomain of example.com over https, and
+// not example.com itself. A portal serves uploads from per-game hosts we only
+// learn by watching refused connections, so naming them one at a time fails
+// closed for every domain we have not yet seen.
+const wildcardOrigins = [...allowedOrigins]
+  .map((entry) => /^(https?):\/\/\*\.([a-z0-9.-]+)$/i.exec(entry))
+  .filter((match) => match !== null)
+  .map((match) => ({
+    scheme: (match[1] ?? "").toLowerCase(),
+    suffix: "." + (match[2] ?? "").toLowerCase(),
+  }));
+
+function originAllowed(origin: string): boolean {
+  if (allowedOrigins.has(origin)) return true;
+  let url: URL;
+  try {
+    url = new URL(origin);
+  } catch {
+    return false;
+  }
+  return wildcardOrigins.some(
+    ({ scheme, suffix }) => url.protocol === scheme + ":" && url.hostname.endsWith(suffix),
+  );
+}
+
 function validVisitorId(value: unknown): string | null {
   return typeof value === "string" && /^[a-zA-Z0-9_-]{16,64}$/.test(value)
     ? value
@@ -411,17 +436,18 @@ fastify.get("/play", { websocket: true }, (socket, req) => {
   //
   // Production does set it — docker-compose.prod.yml pins this to our own
   // domain — so the portal build is refused with 1008 until PORTAL_ORIGINS in
-  // .env names the origin CrazyGames serves the upload from. That value comes
-  // from the developer portal, or from the Origin logged on the line below when
-  // a real connection is refused. It is not guessable, and getting it wrong
-  // fails closed for every portal player at once.
+  // .env names the origin CrazyGames serves the upload from. That is not the
+  // games.crazygames.com the iframe src names but a per-game host
+  // (nightraze.game-files.crazygames.com in QA), found from the Origin logged
+  // on the line below — hence the `https://*.crazygames.com` form, since
+  // getting it wrong fails closed for every portal player at once.
   //
   // frame-ancestors used to be what stopped a copy of the bundle being pointed
   // at this arena from somebody else's page, and no longer participates. This
   // check is the only thing left that could, which is the argument for keeping
   // the list tight rather than emptying it to make the problem go away.
   const origin = req.headers.origin;
-  if (origin && allowedOrigins.size > 0 && !allowedOrigins.has(origin)) {
+  if (origin && allowedOrigins.size > 0 && !originAllowed(origin)) {
     fastify.log.warn({ origin }, "connection rejected: origin not allowed");
     socket.close(1008, "origin not allowed");
     return;

@@ -70,10 +70,18 @@ WS open from https://games.crazygames.com  ->  close 1008 "origin not allowed"
 ```
 
 So until the portal's origin is added, every portal player is refused and the
-game does not start for anyone. Set `PORTAL_ORIGINS` in `.env` to the origin the
-uploaded build is actually served from — read it off the developer portal, or
-off the `Origin` header of a refused connection in the server log; do not guess
-a hostname. `docker-compose.prod.yml` appends it to our own domain.
+game does not start for anyone. The iframe's `src` is misleading here: it names
+`games.crazygames.com`, but the document that opens the socket is served from
+`https://nightraze.game-files.crazygames.com`, which is what the server log's
+refused `Origin` showed during QA. Production sets
+
+```
+PORTAL_ORIGINS=https://*.crazygames.com
+```
+
+in `.env`. A `*.` entry admits any https subdomain (not the bare domain), so a
+per-game or regional host we have not seen yet is not refused.
+`docker-compose.prod.yml` appends it to our own domain.
 
 `frame-ancestors` used to be what stopped a reskin, and no longer participates,
 so this check is now the only thing that could.
