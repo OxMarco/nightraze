@@ -60,7 +60,9 @@ RUN npm run build
 # the two build stages deliberately do not have (eslint.config.js explains why).
 # Nothing here is compiled: ESLint parses the sources, so neither workspace's
 # node_modules is needed and this stays a small, fast layer that only rebuilds
-# when the sources or the rules change.
+# when the sources or the rules change. crazygame/ is outside the build context
+# (see .dockerignore), so this lints only what the image is built from;
+# `make test` lints crazygame/ on the host.
 FROM node:24-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd AS lint
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -69,7 +71,7 @@ COPY eslint.config.js ./
 COPY client/src ./client/src
 COPY client/test ./client/test
 COPY server/src ./server/src
-RUN npm run lint && touch /lint-passed
+RUN npm run lint:image && touch /lint-passed
 
 # ---- client test ----
 # The platform suite, which is the only place the CrazyGames adapter's guards

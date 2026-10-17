@@ -6,6 +6,7 @@
   "description": "Repo-wide developer tooling. Not an application workspace: nothing here is built, bundled, or shipped, and neither client/ nor server/ depends on it.",
   "scripts": {
     "lint": "eslint client/src client/test crazygame/src server/src",
+    "lint:image": "eslint client/src client/test server/src",
     "lint:fix": "eslint --fix client/src client/test crazygame/src server/src"
   },
   "devDependencies": {
